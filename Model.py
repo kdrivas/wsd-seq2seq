@@ -277,7 +277,7 @@ def train(input_lang, output_lang, input_batches, input_lengths, target_batches,
     decoder_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, use_tf, train, USE_CUDA)
+    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train, USE_CUDA)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
