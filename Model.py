@@ -165,10 +165,11 @@ class Disamb(nn.Module):
         hidden_init = self.encoder.init_hidden(self.batch_size)
         cell_init = self.encoder.init_cell(self.batch_size)
         
-        encoder_outputs, encoder_hidden = self.encoder(input_batches, input_lengths, hidden_init, cell_init)
+        encoder_outputs, encoder_hidden, encoder_cell = self.encoder(input_batches, input_lengths, hidden_init, cell_init)
 
         decoder_input = Variable(torch.LongTensor([SOS_token] * self.batch_size))
         decoder_hidden = encoder_hidden
+        decoder_cell = encoder_cell
 
         all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], self.batch_size, output_lang.n_words))
 
@@ -178,7 +179,7 @@ class Disamb(nn.Module):
         
         for t in range(target_batches.data.size()[0]):
             decoder_output, decoder_hidden, decoder_attn = self.decoder(
-                decoder_input, decoder_hidden, encoder_outputs
+                decoder_input, decoder_hidden, decoder_cell, encoder_outputs
             )
             all_decoder_outputs[t] = decoder_output # Store this step's outputs
             decoder_input = target_batches[t] # Next input is current target
