@@ -73,7 +73,7 @@ class Evaluator():
                         new_beam.decoded_words.append('<EOS>')
                         top_beams.append(new_beam)
                     else:
-                        new_beam.decoded_words.append(self.output_lang.index2word[ni])                        
+                        new_beam.decoded_words.append(self.output_lang.itos[ni])                        
                     
                         decoder_input = Variable(torch.LongTensor([[ni]]))
                         if self.USE_CUDA: decoder_input = decoder_input.cuda()
