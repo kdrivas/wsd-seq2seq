@@ -160,7 +160,7 @@ class Disamb(nn.Module):
         
         self.USE_CUDA = USE_CUDA
 
-    def forward(self, input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, use_tf, train):
+    def forward(self, input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train):
         
         hidden_init = self.encoder.init_hidden(self.batch_size)
         cell_init = self.encoder.init_cell(self.batch_size)
@@ -184,13 +184,14 @@ class Disamb(nn.Module):
             all_decoder_outputs[t] = decoder_output # Store this step's outputs
             decoder_input = target_batches[t] # Next input is current target
             
+            use_tf = random.random() < tf_ratio
             if use_tf and train:
                 # De la data
                 decoder_input = target_batches[t]
             else:
                 # Del modelo
                 topv, topi = decoder_output.data.topk(1)            
-                decoder_input = Variable(torch.LongTensor(topi).squeeze())
+                decoder_input = Variable(topi.squeeze())
                 
                 if self.USE_CUDA: decoder_input = decoder_input.cuda()
         
@@ -202,7 +203,7 @@ class Disamb(nn.Module):
 
 ########################## TRAINING PARALLEL ###########################
    
-def train_parallel(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, disamb, disamb_optimizer, criterion, use_tf, max_length, clip=None, train=True, USE_CUDA=False):
+def train_parallel(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, disamb, disamb_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, USE_CUDA=False):
 
     # Zero gradients of both optimizers
     disamb_optimizer.zero_grad()
@@ -226,7 +227,7 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
  
 ########################## TRAINING ###########################
 
-def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, use_tf, train=True, USE_CUDA=False):
+def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train=True, USE_CUDA=False):
         
     cell = encoder.init_cell(batch_size)
     hidden = encoder.init_hidden(batch_size)
@@ -252,6 +253,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batc
         all_decoder_outputs[t] = decoder_output # Store this step's outputs
         decoder_input = target_batches[t] # Next input is current target
         
+        use_tf = random.random() < tf_ratio
         if use_tf and train:
             # De la data
             decoder_input = target_batches[t]
