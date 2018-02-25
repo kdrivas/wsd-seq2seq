@@ -176,6 +176,7 @@ class Disamb(nn.Module):
         if self.USE_CUDA:
             all_decoder_outputs = all_decoder_outputs.cuda()
             decoder_input = decoder_input.cuda()
+            decoder_cell = decoder_cell.cuda()
         
         for t in range(target_batches.data.size()[0]):
             decoder_output, decoder_hidden, decoder_attn = self.decoder(
