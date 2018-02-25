@@ -148,7 +148,7 @@ class Attn_decoder_rnn(nn.Module):
 ########################## DATA PARALLEL ###########################
     
 class Disamb(nn.Module):
-    def __init__(self, encoder, decoder, batch_size, n_layers):
+    def __init__(self, encoder, decoder, batch_size, n_layers, USE_CUDA=False):
         super(Disamb, self).__init__()
         
         self.small_hidden_size = 8
@@ -157,16 +157,19 @@ class Disamb(nn.Module):
         self.decoder = decoder
         self.batch_size = batch_size
         self.n_layers = n_layers
+        
+        self.USE_CUDA = USE_CUDA
 
-    def forward(self, input_batches, input_lengths, target_batches, target_lengths, tf_ratio):
+    def forward(self, input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train):
+        
         encoder_outputs, encoder_hidden = self.encoder(input_batches, input_lengths, None)
 
         decoder_input = Variable(torch.LongTensor([SOS_token] * self.batch_size))
         decoder_hidden = encoder_hidden
 
-        all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], self.batch_size, sense.n_words))
+        all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], self.batch_size, output_lang.n_words))
 
-        if USE_CUDA:
+        if self.USE_CUDA:
             all_decoder_outputs = all_decoder_outputs.cuda()
             decoder_input = decoder_input.cuda()
         
@@ -178,7 +181,7 @@ class Disamb(nn.Module):
             decoder_input = target_batches[t] # Next input is current target
             
             use_tf = random.random() < tf_ratio
-            if use_tf:
+            if use_tf and train:
                 # De la data
                 decoder_input = target_batches[t]
             else:
@@ -186,7 +189,7 @@ class Disamb(nn.Module):
                 topv, topi = decoder_output.data.topk(1)            
                 decoder_input = Variable(torch.LongTensor(topi).squeeze())
                 
-                if USE_CUDA: decoder_input = decoder_input.cuda()
+                if self.USE_CUDA: decoder_input = decoder_input.cuda()
         
         del decoder_output
         del decoder_hidden
@@ -196,34 +199,31 @@ class Disamb(nn.Module):
 
 ########################## TRAINING PARALLEL ###########################
    
-def train_parallel(input_batches, input_lengths, target_batches, target_lengths, disamb, disamb_optimizer, criterion, tf_ratio, max_length=MAX_LENGTH):
-    
+def train_parallel(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, disamb, disamb_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, USE_CUDA=False):
+
     # Zero gradients of both optimizers
     disamb_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = disamb(input_batches, input_lengths, target_batches, target_lengths, tf_ratio)
+    all_decoder_outputs, target_batches = disamb(input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
     loss = criterion(log_probs, target_batches.view(-1))
     
-    loss.backward()
-    
-    # Clip gradient norms
-    dc = torch.nn.utils.clip_grad_norm(disamb.parameters(), clip)
-
-    # Update parameters with optimizers
-    disamb_optimizer.step()
+    if train:
+        loss.backward()
+        torch.nn.utils.clip_grad_norm(disamb.parameters(), clip)
+        disamb_optimizer.step()
     
     del all_decoder_outputs
     del target_batches
     
-    return loss.data[0], dc    
+    return loss.data[0]
  
 ########################## TRAINING ###########################
 
-def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, use_tf, USE_CUDA=False):
+def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, use_tf, train=True, USE_CUDA=False):
         
     cell = encoder.init_cell(batch_size)
     hidden = encoder.init_hidden(batch_size)
@@ -272,7 +272,7 @@ def train(input_lang, output_lang, input_batches, input_lengths, target_batches,
     decoder_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, use_tf, USE_CUDA)
+    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, use_tf, train, USE_CUDA)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
