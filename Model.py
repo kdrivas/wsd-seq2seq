@@ -160,7 +160,7 @@ class Disamb(nn.Module):
         
         self.USE_CUDA = USE_CUDA
 
-    def forward(self, input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train):
+    def forward(self, input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, use_tf, train):
         
         encoder_outputs, encoder_hidden = self.encoder(input_batches, input_lengths, None)
 
@@ -180,7 +180,6 @@ class Disamb(nn.Module):
             all_decoder_outputs[t] = decoder_output # Store this step's outputs
             decoder_input = target_batches[t] # Next input is current target
             
-            use_tf = random.random() < tf_ratio
             if use_tf and train:
                 # De la data
                 decoder_input = target_batches[t]
@@ -199,13 +198,13 @@ class Disamb(nn.Module):
 
 ########################## TRAINING PARALLEL ###########################
    
-def train_parallel(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, disamb, disamb_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, USE_CUDA=False):
+def train_parallel(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, disamb, disamb_optimizer, criterion, use_tf, max_length, clip=None, train=True, USE_CUDA=False):
 
     # Zero gradients of both optimizers
     disamb_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = disamb(input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train)
+    all_decoder_outputs, target_batches = disamb(input_batches, input_lengths, target_batches, target_lengths, use_tf, train)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
