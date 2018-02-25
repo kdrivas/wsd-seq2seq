@@ -162,8 +162,8 @@ class Disamb(nn.Module):
 
     def forward(self, input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, use_tf, train):
         
-        hidden_init = self.encoder.init_hidden(input_batches.shape[0])
-        cell_init = self.encoder.init_cell(input_batches.shape[0])
+        hidden_init = self.encoder.init_hidden(self.batch_size)
+        cell_init = self.encoder.init_cell(self.batch_size)
         
         encoder_outputs, encoder_hidden = self.encoder(input_batches, input_lengths, hidden_init, cell_init)
 
