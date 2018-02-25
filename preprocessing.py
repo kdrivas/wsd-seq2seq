@@ -233,7 +233,7 @@ def remove_LRB_RRB(sentences, iz_del, der_del):
     
     return arr_sentence
 
-def process_instance(text, ner, parser, word_dict, nlp, is_train = True, sense_ids = None, prune_sentence = False, verbose = False):
+def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True, sense_ids = None, prune_sentence = False, verbose = False):
     pairs = []
     sentences = []
     
@@ -286,16 +286,18 @@ def process_instance(text, ner, parser, word_dict, nlp, is_train = True, sense_i
             for s in sentences_prune:
 
                 for sense_id in sense_ids:   
-                    pair = [[],[],[]]
+                    pair = [[],[],[],[]]
                     sense_id = re.sub(r'%|:', '', sense_id)
                     if(prune_sentence):
                         pair[0] = s
                         pair[1] = re.sub(word_ambiguos[0], word_ambiguos[0] + '_' + sense_id, s)
                         pair[2] = word_ambiguos[0] + '_' + sense_id
+                        pair[3] = ix_ins
                     else:
                         pair[0] = re.sub(r'<head>(.*?)</head>', word_ambiguos[0], s)
                         pair[1] = re.sub(r'<head>(.*?)</head>', word_ambiguos[0] + '_' + sense_id, s)
                         pair[2] = word_ambiguos[0] + '_' + sense_id
+                        pair[3] = ix_ins
                     pairs.append(pair)
         
     return pairs
@@ -346,9 +348,9 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         data = re.sub(r'u \'d', 'uld', data)
         data = re.sub(r'&', '', data)
         if(is_train):
-            pairs.extend(process_instance(data, ner, parser, word_dict, nlp, is_train, None, prune_sentence, verbose))
+            pairs.extend(process_instance(ix_ins, data, ner, parser, word_dict, nlp, is_train, None, prune_sentence, verbose))
         else:
-            pairs.extend(process_instance(data, ner, parser, word_dict, nlp, is_train, senses_all[ix_ins], prune_sentence, verbose))
+            pairs.extend(process_instance(ix_ins, data, ner, parser, word_dict, nlp, is_train, senses_all[ix_ins], prune_sentence, verbose))
         
     
     return np.array(pairs)
