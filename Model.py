@@ -176,7 +176,8 @@ class Disamb(nn.Module):
         if self.USE_CUDA:
             all_decoder_outputs = all_decoder_outputs.cuda()
             decoder_input = decoder_input.cuda()
-        
+            
+        use_tf = random.random() < tf_ratio
         for t in range(target_batches.data.size()[0]):
             decoder_output, decoder_hidden, decoder_cell, decoder_attn = self.decoder(
                 decoder_input, decoder_hidden, decoder_cell, encoder_outputs
@@ -184,7 +185,7 @@ class Disamb(nn.Module):
             all_decoder_outputs[t] = decoder_output # Store this step's outputs
             decoder_input = target_batches[t] # Next input is current target
             
-            use_tf = random.random() < tf_ratio
+            
             if use_tf and train:
                 # De la data
                 decoder_input = target_batches[t]
@@ -246,6 +247,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batc
         decoder_input = decoder_input.cuda()
         #decoder_context = decoder_context.cuda()
         
+    use_tf = random.random() < tf_ratio
     for t in range(target_batches.data.size()[0]):
         decoder_output, decoder_hidden, decoder_cell, decoder_attn = decoder(
             decoder_input, decoder_hidden, decoder_cell, encoder_outputs
@@ -253,7 +255,6 @@ def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batc
         all_decoder_outputs[t] = decoder_output # Store this step's outputs
         decoder_input = target_batches[t] # Next input is current target
         
-        use_tf = random.random() < tf_ratio
         if use_tf and train:
             # De la data
             decoder_input = target_batches[t]
@@ -270,7 +271,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batc
         
     return all_decoder_outputs, target_batches
 
-def train(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, use_tf, max_length, clip=None, train=True, USE_CUDA=False):
+def train(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, USE_CUDA=False):
     
     # Zero gradients of both optimizers
     encoder_optimizer.zero_grad()
