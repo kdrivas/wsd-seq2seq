@@ -211,7 +211,7 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
     all_decoder_outputs, target_batches = disamb(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, use_tf, train)
     
     # Loss calculation and backpropagation
-    log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
+    log_probs = F.log_softmax(all_decoder_outputs.view(-1, disamb.decoder.output_size), dim=1)
     loss = criterion(log_probs, target_batches.view(-1))
     
     if train:
