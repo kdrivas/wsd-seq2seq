@@ -162,7 +162,10 @@ class Disamb(nn.Module):
 
     def forward(self, input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, use_tf, train):
         
-        encoder_outputs, encoder_hidden = self.encoder(input_batches, input_lengths, None)
+        hidden_init = self.encoder.init_hidden(input_batches.shape[0])
+        cell_init = self.encoder.init_cell(input_batches.shape[0])
+        
+        encoder_outputs, encoder_hidden = self.encoder(input_batches, input_lengths, hidden_init, cell_init)
 
         decoder_input = Variable(torch.LongTensor([SOS_token] * self.batch_size))
         decoder_hidden = encoder_hidden
