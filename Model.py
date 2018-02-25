@@ -145,6 +145,82 @@ class Attn_decoder_rnn(nn.Module):
         # Return final output, hidden state, and attention weights (for visualization)
         return output, hidden, cell, attn_weights
 
+########################## DATA PARALLEL ###########################
+    
+class Disamb(nn.Module):
+    def __init__(self, encoder, decoder, batch_size, n_layers):
+        super(Disamb, self).__init__()
+        
+        self.small_hidden_size = 8
+        self.small_n_layers = 2
+        self.encoder = encoder
+        self.decoder = decoder
+        self.batch_size = batch_size
+        self.n_layers = n_layers
+
+    def forward(self, input_batches, input_lengths, target_batches, target_lengths, tf_ratio):
+        encoder_outputs, encoder_hidden = self.encoder(input_batches, input_lengths, None)
+
+        decoder_input = Variable(torch.LongTensor([SOS_token] * self.batch_size))
+        decoder_hidden = encoder_hidden
+
+        all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], self.batch_size, sense.n_words))
+
+        if USE_CUDA:
+            all_decoder_outputs = all_decoder_outputs.cuda()
+            decoder_input = decoder_input.cuda()
+        
+        for t in range(target_batches.data.size()[0]):
+            decoder_output, decoder_hidden, decoder_attn = self.decoder(
+                decoder_input, decoder_hidden, encoder_outputs
+            )
+            all_decoder_outputs[t] = decoder_output # Store this step's outputs
+            decoder_input = target_batches[t] # Next input is current target
+            
+            use_tf = random.random() < tf_ratio
+            if use_tf:
+                # De la data
+                decoder_input = target_batches[t]
+            else:
+                # Del modelo
+                topv, topi = decoder_output.data.topk(1)            
+                decoder_input = Variable(torch.LongTensor(topi).squeeze())
+                
+                if USE_CUDA: decoder_input = decoder_input.cuda()
+        
+        del decoder_output
+        del decoder_hidden
+        del decoder_attn
+        
+        return all_decoder_outputs, target_batches    
+
+########################## TRAINING PARALLEL ###########################
+   
+def train_parallel(input_batches, input_lengths, target_batches, target_lengths, disamb, disamb_optimizer, criterion, tf_ratio, max_length=MAX_LENGTH):
+    
+    # Zero gradients of both optimizers
+    disamb_optimizer.zero_grad()
+    loss = 0 # Added onto for each word
+
+    all_decoder_outputs, target_batches = disamb(input_batches, input_lengths, target_batches, target_lengths, tf_ratio)
+    
+    # Loss calculation and backpropagation
+    log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
+    loss = criterion(log_probs, target_batches.view(-1))
+    
+    loss.backward()
+    
+    # Clip gradient norms
+    dc = torch.nn.utils.clip_grad_norm(disamb.parameters(), clip)
+
+    # Update parameters with optimizers
+    disamb_optimizer.step()
+    
+    del all_decoder_outputs
+    del target_batches
+    
+    return loss.data[0], dc    
+ 
 ########################## TRAINING ###########################
 
 def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, use_tf, USE_CUDA=False):
