@@ -512,7 +512,7 @@ def prepare_data(pairs_train, pairs_test, max_length):
 
 ############## GENERATE VECTORS ##########################
 
-def construct_vectors(pairs, vector_name_in='fasttext.en.300d', vector_name_out='fasttext.en.300d'):
+def construct_vectors(pairs, vector_name_in='fasttext.en.300d', vector_name_out='fasttext.en.300d', fill_rare_words=True):
     lang_in = pd.DataFrame(pairs[:, 0], columns=["lang_in"])
     lang_out = pd.DataFrame(pairs[:, 1], columns=["lang_out"])
 
@@ -534,5 +534,14 @@ def construct_vectors(pairs, vector_name_in='fasttext.en.300d', vector_name_out=
 
     lang_in.vocab.load_vectors(vector_name_in)
     lang_out.vocab.load_vectors(vector_name_out)
+    
+    # for rare words in sense vectors, like activated_3281 or something like that
+    if fill_rare_words:
+        for word in lang_out.vocab.itos:
+            if '_' in word:
+                rare_word = word.split('_')[0]
+                ix_rare_sent = lang_in.vocab.stoi[rare_word]
+                ix_rare_sens = lang_out.vocab.stoi[word]
+                lang_out.vocab.vectors[ix_rare_sens] = lang_in.vocab.vectors[ix_rare_sent].clone()
     
     return lang_in, lang_out
