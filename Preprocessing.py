@@ -26,6 +26,10 @@ from nltk.corpus import wordnet
 
 import enchant
 
+import torchtext 
+from torchtext import data
+from torchtext import datasets
+
 PAD_token = 0
 SOS_token = 1
 EOS_token = 2
@@ -505,3 +509,30 @@ def prepare_data(pairs_train, pairs_test, max_length):
     
     print('Indexed %d words in input language, %d words in output' % (sentence.n_words, sense.n_words))
     return sentence, sense
+
+############## GENERATE VECTORS ##########################
+
+def construct_vectors(pairs, vector_name_in='fasttext.en.300d', vector_name_out='fasttext.en.300d'):
+    lang_in = pd.DataFrame(pairs[:, 0], columns=["lang_in"])
+    lang_out = pd.DataFrame(pairs[:, 1], columns=["lang_out"])
+
+    lang_in.to_csv('lang_in.csv', index=False)
+    lang_out.to_csv('lang_out.csv', index=False)
+
+    lang_in = data.Field(sequential=True, lower=True)
+    lang_out = data.Field(sequential=True, lower=True)
+
+    mt_lang_in = data.TabularDataset(
+        path='lang_in.csv', format='csv',
+        fields=[('lang_in', lang_in)])
+    mt_lang_out = data.TabularDataset(
+        path='lang_out.csv', format='csv',
+        fields=[('lang_out', lang_out)])
+
+    lang_in.build_vocab(mt_lang_in)
+    lang_out.build_vocab(mt_lang_out)
+
+    lang_in.vocab.load_vectors(vector_name_in)
+    lang_out.vocab.load_vectors(vector_name_out)
+    
+    return lang_in, lang_out
