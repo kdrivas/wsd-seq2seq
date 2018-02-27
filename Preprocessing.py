@@ -34,6 +34,19 @@ PAD_token = 0
 SOS_token = 1
 EOS_token = 2
 
+_DEP_LABELS = ['ROOT', 'DOBJ','ADV', 'ADV-GAP', 'AMOD', 'APPO', 'BNF', 'CONJ', 'COORD', 'DEP',
+               'DEP-GAP', 'DIR', 'DIR-GAP', 'DIR-OPRD', 'DIR-PRD', 'DTV', 'EXT',
+               'EXT-GAP', 'EXTR', 'GAP-LGS', 'GAP-LOC', 'GAP-LOC-PRD', 'GAP-MNR',
+               'GAP-NMOD', 'GAP-OBJ', 'GAP-OPRD', 'GAP-PMOD', 'GAP-PRD', 'GAP-PRP',
+               'GAP-SBJ', 'GAP-TMP', 'GAP-VC', 'HMOD', 'HYPH', 'IM', 'LGS', 'LOC',
+               'LOC-OPRD', 'LOC-PRD', 'LOC-TMP', 'MNR', 'MNR-PRD', 'MNR-TMP', 'NAME',
+               'NMOD', 'NSUBJ','OBJ', 'OPRD', 'P', 'PMOD', 'POSTHON', 'PRD', 'PRD-PRP',
+               'PRD-TMP', 'PRN', 'PRP', 'PRT', 'PUT', 'SBJ', 'SUB', 'SUFFIX',
+                'TITLE', 'TMP', 'VC', 'VOC']
+
+
+_DEP_LABELS_DICT = {label:ix for ix, label in enumerate(_DEP_LABELS)}
+
 def find_words_cutoff(sentences, ner):
     words_cutoff = []
     
@@ -287,25 +300,27 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
                 
             
             if(verbose):
-                print('---oracione sin parentesis')
+                print('---oracion sin parentesis')
                 print(sentences_prune[0])
                 print('\n')
                 
             for s in sentences_prune:
 
                 for sense_id in sense_ids:   
-                    pair = [[],[],[],[]]
+                    pair = [[],[],[],[],[]]
                     sense_id = re.sub(r'%|:', '', sense_id)
                     if(prune_sentence):
                         pair[0] = s
                         pair[1] = re.sub(word_ambiguos[0], word_ambiguos[0] + '_' + sense_id, s)
-                        pair[2] = word_ambiguos[0] + '_' + sense_id
-                        pair[3] = ix_ins
+                        pair[2] = nlp.dependency_parse(pair[0])
+                        pair[3] = word_ambiguos[0] + '_' + sense_id
+                        pair[4] = ix_ins
                     else:
                         pair[0] = re.sub(r'<head>(.*?)</head>', word_ambiguos[0], s)
                         pair[1] = re.sub(r'<head>(.*?)</head>', word_ambiguos[0] + '_' + sense_id, s)
-                        pair[2] = word_ambiguos[0] + '_' + sense_id
-                        pair[3] = ix_ins
+                        pair[2] = nlp.dependency_parse(pair[0])
+                        pair[3] = word_ambiguos[0] + '_' + sense_id
+                        pair[4] = ix_ins
                     pairs.append(pair)
         
     return pairs
@@ -365,6 +380,14 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
 
 ###################### BATCHES ############################
 
+def get_all_id(pairs):
+    id_pairs = []
+    
+    for i in range(len(pairs)):
+        id_pairs.append(int(pairs[i][3]))
+        
+    return id_pairs
+
 def pad_seq(seq, max_length):
     seq += [PAD_token for i in range(max_length - len(seq))]
     return seq
@@ -376,11 +399,13 @@ def random_batch(input_lang, output_lang, batch_size, pairs, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
+    arr_sentences = []
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
         id_random = random.choice(id_arr)
         pair = pairs[id_random]
+        arr_sentences.append(pair[0])
         
         id_pairs.append(id_random)
         input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
@@ -400,8 +425,85 @@ def random_batch(input_lang, output_lang, batch_size, pairs, USE_CUDA=False):
     if USE_CUDA:
         input_var = input_var.cuda()
         target_var = target_var.cuda()
+          
+    nlp = StanfordCoreNLP(r'/home/krivas/projects/wsd-v2/stanford-corenlp-full-2018-01-31/')
+
+    sentence = 'which you step on to activate it'
+    de = nlp.dependency_parse(sentence)
+
+    arr_sentences = []
+    arr_sentences.append(de)
+    arr_sentences.append(de)
+    arr_sentences.append(de)
+    arr_sentences.append(de)
+    
+    max_length = max(input_lengths)
+    matrix_size = batch_size * max_length
+    
+    #Initialize adjancencies matrixes
+
+    adj_arc_in = np.zeros((matrix_size, 2), dtype='int32')
+    adj_lab_in = np.zeros(matrix_size, dtype='int32')
+
+    adj_arc_out = np.zeros((matrix_size, 2), dtype='int32')
+    adj_lab_out = np.zeros(matrix_size, dtype='int32')
+    
+    #Initialize mask matrix
+
+    mask_in = np.zeros(matrix_size, dtype='float32')
+    mask_out = np.zeros(matrix_size, dtype='float32')
+
+    mask_loop = np.ones((matrix_size, 1), dtype='float32')
+    
+    #Get adjacency matrix for incoming and outgoing arcs
+    for idx_sentence, dep_sentence in enumerate(arr_sentences):
+        for idx_arc, arc in enumerate(dep_sentence):
+            if(arc[0] != 'ROOT') and arc[0].upper() in _DEP_LABELS:
+                #get index of words in the sentence
+                arc_1 = int(arc[1]) - 1
+                arc_2 = int(arc[2]) - 1
+
+                idx_in = (idx_arc) + idx_sentence * max_length
+                idx_out = (arc_2) + idx_sentence * max_length
+
+                #Make adjacency matrix for incoming arcs
+                adj_arc_in[idx_in] = np.array([idx_sentence, arc_2]) 
+                adj_lab_in[idx_in] = np.array([_DEP_LABELS_DICT[arc[0].upper()]]) 
+
+                #Setting mask to consider that index
+                mask_in[idx_in] = 1
+
+                #Make adjacency matrix for outgoing arcs
+                adj_arc_out[idx_out] = np.array([idx_sentence, arc_1])   
+                adj_lab_out[idx_out] = np.array([_DEP_LABELS_DICT[arc[0].upper()]])
+
+                #Setting mask to consider that index
+                mask_out[idx_out] = 1
+
+
+    adj_arc_in = torch.LongTensor(np.transpose(adj_arc_in)) 
+    adj_arc_out = torch.LongTensor(np.transpose(adj_arc_out))
+
+    adj_lab_in = Variable(torch.LongTensor(adj_lab_in))
+    adj_lab_out = Variable(torch.LongTensor(adj_lab_out))
+
+    mask_in = Variable(torch.FloatTensor(mask_in.reshape((matrix_size, 1))))
+    mask_out = Variable(torch.FloatTensor(mask_out.reshape((matrix_size, 1))))
+    mask_loop = Variable(torch.FloatTensor(mask_loop))
+    
+    if USE_CUDA:
+        adj_arc_in = adj_arc_in.cuda()
+        adj_arc_out = adj_arc_out.cuda()
+        adj_lab_in = adj_lab_in.cuda()
+        adj_lab_out = adj_lab_out.cuda()
         
-    return input_var, input_lengths, target_var, target_lengths, id_pairs
+        mask_in = mask_in.cuda()
+        mask_out = mask_out.cuda()
+        mask_loop = mask_loop.cuda()
+        
+    return input_var, input_lengths, target_var, target_lengths,\
+            adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
+            id_pairs
 
 def variable_from_sentence(lang, sentence, USE_CUDA=False):
     indexes = indexes_from_sentence(lang, sentence)
