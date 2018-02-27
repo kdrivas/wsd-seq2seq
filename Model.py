@@ -10,7 +10,7 @@ from Preprocessing import SOS_token
 ######################### ENCODER ###########################
 
 class Encoder_rnn(nn.Module):
-    def __init__(self, input_size, hidden_size, n_layers=2, dropout=0.1, lang=None, USE_CUDA=False):
+    def __init__(self, input_size, hidden_size, n_layers=2, dropout=0.1, lang=None, use_optim_emb=False, USE_CUDA=False):
         super(Encoder_rnn, self).__init__()
         
         self.input_size = input_size
@@ -22,6 +22,8 @@ class Encoder_rnn(nn.Module):
         self.embedding = nn.Embedding(input_size, hidden_size)
         if(lang):
             self.embedding.weight.data.copy_(lang.vocab.vectors)
+            
+        if(not use_optim_emb):
             self.embedding.weight.required_grad = False
             
         self.lstm = nn.LSTM(hidden_size, hidden_size, n_layers, dropout=self.dropout, bidirectional=True, batch_first=False)
@@ -96,7 +98,7 @@ class Global_attn(nn.Module):
 ######################### DECODER ###########################
 
 class Attn_decoder_rnn(nn.Module):
-    def __init__(self, attn_model, hidden_size, output_size, n_layers=1, dropout=0.1, lang=None, USE_CUDA=False):
+    def __init__(self, attn_model, hidden_size, output_size, n_layers=1, dropout=0.1, lang=None, use_optim_emb=False, USE_CUDA=False):
         super(Attn_decoder_rnn, self).__init__()
 
         # Keep for reference
@@ -111,6 +113,8 @@ class Attn_decoder_rnn(nn.Module):
         self.embedding = nn.Embedding(output_size, hidden_size)
         if(lang):
             self.embedding.weight.data.copy_(lang.vocab.vectors)
+            
+        if(use_optim_emb):
             self.embedding.weight.required_grad = False
 
         self.embedding_dropout = nn.Dropout(dropout)
