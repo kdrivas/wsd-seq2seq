@@ -610,7 +610,7 @@ def prepare_data(pairs_train, pairs_test, max_length):
         sense.index_words(pair[1])
     
     print('Indexed %d words in input language, %d words in output' % (sentence.n_words, sense.n_words))
-    return sentence, sense
+    return sentence, sense, pairs_train, pairs_test
 
 ############## GENERATE VECTORS ##########################
 
