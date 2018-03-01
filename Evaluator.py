@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import torch
+import re
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -54,7 +55,7 @@ class Evaluator():
         top_beams = []
         
         # Use decoder output as inputs
-        for di in range(self.max_length):      
+        for di in range(input_length):      
             new_beams = []
             for beam in beams:
                 decoder_output, decoder_hidden, decoder_cell, decoder_attention = self.decoder(
@@ -86,6 +87,9 @@ class Evaluator():
             if len(beams) == 0:
                 break
         
+        del decoder_output
+        del decoder_input
+        
         top_beams = {beam: np.mean(beam.sequence_log_probs) for beam in top_beams}
 
         # for beam in top_beams:
@@ -107,18 +111,30 @@ class Evaluator():
         print('<', output_sentence)
         print('')
         
-    def evaluate_acc(self, id_pairs, pairs, answer_senses, k_beams=3):
+    def evaluate_acc(self, id_pairs, pairs, answer_senses, k_beams=3, verbose=False):
         
         hint = 0
         for ix in id_pairs:
             output_words, decoder_attn, beams = self.evaluate(pairs[ix][0], k_beams)
             output_sentence = ' '.join(output_words)
             
+            torch.cuda.empty_cache()
             tokens = output_sentence.split()
-            for token in tokens:
-                if(answer_senses[id_pairs[ix][3]] == token):
-                    hint += 1
-                    break
+            ix_answer = int(pairs[ix][3])
+
+            if(verbose):
+                print("----- tokens procesados")
+                print(tokens)
+                print("----- respuesta")
+                print(answer_senses[ix_answer])
+                print()
+                
+            for token in tokens:    
+                for sense in answer_senses[ix_answer]:
+                    sense = re.sub('[!:%#$]', '', sense)
+                    if(sense in token):
+                        hint += 1
+                        break
                     
         return hint * 1.0 / len(id_pairs)   
 
