@@ -10,7 +10,7 @@ from Preprocessing import SOS_token
 ######################### ENCODER ###########################
 
 class Encoder_rnn(nn.Module):
-    def __init__(self, input_size, hidden_size, emb_size=None, n_layers=2, dropout=0.1, lang=None, use_optim_emb=False, USE_CUDA=False):
+    def __init__(self, input_size, hidden_size, emb_size=None, n_layers=2, dropout=0.1, lang=None, use_optim_emb=True, USE_CUDA=False):
         super(Encoder_rnn, self).__init__()
         
         self.input_size = input_size
@@ -26,7 +26,7 @@ class Encoder_rnn(nn.Module):
         if lang:
             self.embedding.weight.data.copy_(lang.vocab.vectors)
             
-        if use_optim_emb:
+        if not use_optim_emb:
             self.embedding.weight.required_grad = False
             
         self.lstm = nn.LSTM(emb_size, hidden_size, n_layers, dropout=self.dropout, bidirectional=True, batch_first=False)
