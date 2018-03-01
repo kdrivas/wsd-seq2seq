@@ -350,7 +350,7 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
     parser=StanfordParser(path_model + "stanford-parser-full-2017-06-09/stanford-parser.jar", \
                      path_model + "stanford-parser-full-2017-06-09/stanford-parser-3.8.0-models.jar")
 
-    nlp = StanfordCoreNLP(path_model + "stanford-corenlp-full-2018-01-31/")
+    nlp = StanfordCoreNLP(path_model + "stanford-corenlp-full-2018-02-27/")
     
     word_dict = enchant.Dict('en_US')
     
