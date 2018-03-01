@@ -395,17 +395,17 @@ def pad_seq(seq, max_length):
 def indexes_from_sentence(lang, sentence):
     return [lang.stoi[word] for word in sentence.split(' ')] + [EOS_token]
 
-def random_batch(input_lang, output_lang, batch_size, pairs, USE_CUDA=False):
+def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
-    arr_sentences = []
+    arr_dep = []
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
         id_random = random.choice(id_arr)
         pair = pairs[id_random]
-        arr_sentences.append(pair[0])
+        arr_dep.append(pair[2])
         
         id_pairs.append(id_random)
         input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
@@ -425,17 +425,18 @@ def random_batch(input_lang, output_lang, batch_size, pairs, USE_CUDA=False):
     if USE_CUDA:
         input_var = input_var.cuda()
         target_var = target_var.cuda()
-          
-    nlp = StanfordCoreNLP(r'/home/krivas/projects/wsd-v2/stanford-corenlp-full-2018-01-31/')
 
-    sentence = 'which you step on to activate it'
-    de = nlp.dependency_parse(sentence)
+#
+#     nlp = StanfordCoreNLP(r'/home/krivas/projects/wsd-v2/stanford-corenlp-full-2018-01-31/')
 
-    arr_sentences = []
-    arr_sentences.append(de)
-    arr_sentences.append(de)
-    arr_sentences.append(de)
-    arr_sentences.append(de)
+#     sentence = 'which you step on to activate it'
+#     de = nlp.dependency_parse(sentence)
+
+#     arr_dep = []
+#     arr_dep.append(de)
+#     arr_dep.append(de)
+#     arr_dep.append(de)
+#     arr_dep.append(de)
     
     max_length = max(input_lengths)
     matrix_size = batch_size * max_length
@@ -455,30 +456,33 @@ def random_batch(input_lang, output_lang, batch_size, pairs, USE_CUDA=False):
 
     mask_loop = np.ones((matrix_size, 1), dtype='float32')
     
-    #Get adjacency matrix for incoming and outgoing arcs
-    for idx_sentence, dep_sentence in enumerate(arr_sentences):
-        for idx_arc, arc in enumerate(dep_sentence):
-            if(arc[0] != 'ROOT') and arc[0].upper() in _DEP_LABELS:
-                #get index of words in the sentence
-                arc_1 = int(arc[1]) - 1
-                arc_2 = int(arc[2]) - 1
+    # Enable dependency label batch
+    if return_dep_tree:
+        
+        #Get adjacency matrix for incoming and outgoing arcs
+        for idx_sentence, dep_sentence in enumerate(arr_dep):
+            for idx_arc, arc in enumerate(dep_sentence):
+                if(arc[0] != 'ROOT') and arc[0].upper() in _DEP_LABELS:
+                    #get index of words in the sentence
+                    arc_1 = int(arc[1]) - 1
+                    arc_2 = int(arc[2]) - 1
 
-                idx_in = (idx_arc) + idx_sentence * max_length
-                idx_out = (arc_2) + idx_sentence * max_length
+                    idx_in = (idx_arc) + idx_sentence * max_length
+                    idx_out = (arc_2) + idx_sentence * max_length
 
-                #Make adjacency matrix for incoming arcs
-                adj_arc_in[idx_in] = np.array([idx_sentence, arc_2]) 
-                adj_lab_in[idx_in] = np.array([_DEP_LABELS_DICT[arc[0].upper()]]) 
+                    #Make adjacency matrix for incoming arcs
+                    adj_arc_in[idx_in] = np.array([idx_sentence, arc_2]) 
+                    adj_lab_in[idx_in] = np.array([_DEP_LABELS_DICT[arc[0].upper()]]) 
 
-                #Setting mask to consider that index
-                mask_in[idx_in] = 1
+                    #Setting mask to consider that index
+                    mask_in[idx_in] = 1
 
-                #Make adjacency matrix for outgoing arcs
-                adj_arc_out[idx_out] = np.array([idx_sentence, arc_1])   
-                adj_lab_out[idx_out] = np.array([_DEP_LABELS_DICT[arc[0].upper()]])
+                    #Make adjacency matrix for outgoing arcs
+                    adj_arc_out[idx_out] = np.array([idx_sentence, arc_1])   
+                    adj_lab_out[idx_out] = np.array([_DEP_LABELS_DICT[arc[0].upper()]])
 
-                #Setting mask to consider that index
-                mask_out[idx_out] = 1
+                    #Setting mask to consider that index
+                    mask_out[idx_out] = 1
 
 
     adj_arc_in = torch.LongTensor(np.transpose(adj_arc_in)) 
