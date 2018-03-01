@@ -26,7 +26,7 @@ class Encoder_rnn(nn.Module):
         if lang:
             self.embedding.weight.data.copy_(lang.vocab.vectors)
             
-        if not use_optim_emb:
+        if use_optim_emb:
             self.embedding.weight.required_grad = False
             
         self.lstm = nn.LSTM(emb_size, hidden_size, n_layers, dropout=self.dropout, bidirectional=True, batch_first=False)
