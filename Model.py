@@ -122,8 +122,8 @@ class Attn_decoder_rnn(nn.Module):
         if(lang):
             self.embedding.weight.data.copy_(lang.vocab.vectors)
             
-        #if(use_optim_emb):
-        #    self.embedding.weight.required_grad = False
+        if not use_optim_emb:
+            self.embedding.weight.required_grad = False
 
         self.embedding_dropout = nn.Dropout(dropout)
         self.lstm = nn.LSTM(self.emb_size, hidden_size, n_layers, dropout=dropout)
@@ -399,15 +399,21 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
  
 ########################## TRAINING ###########################
 
-def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train=True, USE_CUDA=False):
+def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train=True, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None, USE_CUDA=False):
         
     cell = encoder.init_cell(batch_size)
     hidden = encoder.init_hidden(batch_size)
         
     encoder_outputs, encoder_hidden, encoder_cell = encoder(input_batches, input_lengths, hidden, cell)
-
     decoder_input = Variable(torch.LongTensor([SOS_token] * batch_size))
-    #decoder_context = Variable(torch.zeros(batch_size, decoder.hidden_size)) 
+    
+    if gcn:
+        encoder_hidden = self.gcn(encoder_hidden,
+                             adj_arc_in, adj_arc_out,
+                             adj_lab_in, adj_lab_out,
+                             mask_in, mask_out,  
+                             mask_loop)
+    
     decoder_hidden = encoder_hidden
     decoder_cell = encoder_cell
 
@@ -442,14 +448,16 @@ def pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batc
         
     return all_decoder_outputs, target_batches
 
-def train(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, USE_CUDA=False):
+def train(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, encoder, decoder, gcn, encoder_optimizer, decoder_optimizer, gcn_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None, USE_CUDA=False):
     
     # Zero gradients of both optimizers
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
+    if gcn:
+        gcn_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train, USE_CUDA)
+    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop, USE_CUDA)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
@@ -461,6 +469,8 @@ def train(input_lang, output_lang, input_batches, input_lengths, target_batches,
         torch.nn.utils.clip_grad_norm(decoder.parameters(), clip)
         encoder_optimizer.step()
         decoder_optimizer.step()
+        if gcn:
+            gcn_optimizer.step()
     
     del all_decoder_outputs
     del target_batches
