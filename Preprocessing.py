@@ -34,16 +34,14 @@ PAD_token = 0
 SOS_token = 1
 EOS_token = 2
 
-_DEP_LABELS = ['ROOT', 'DOBJ','ADV', 'ADV-GAP', 'AMOD', 'APPO', 'BNF', 'CONJ', 'COORD', 'DEP',
-               'DEP-GAP', 'DIR', 'DIR-GAP', 'DIR-OPRD', 'DIR-PRD', 'DTV', 'EXT',
-               'EXT-GAP', 'EXTR', 'GAP-LGS', 'GAP-LOC', 'GAP-LOC-PRD', 'GAP-MNR',
-               'GAP-NMOD', 'GAP-OBJ', 'GAP-OPRD', 'GAP-PMOD', 'GAP-PRD', 'GAP-PRP',
-               'GAP-SBJ', 'GAP-TMP', 'GAP-VC', 'HMOD', 'HYPH', 'IM', 'LGS', 'LOC',
-               'LOC-OPRD', 'LOC-PRD', 'LOC-TMP', 'MNR', 'MNR-PRD', 'MNR-TMP', 'NAME',
-               'NMOD', 'NSUBJ','OBJ', 'OPRD', 'P', 'PMOD', 'POSTHON', 'PRD', 'PRD-PRP',
-               'PRD-TMP', 'PRN', 'PRP', 'PRT', 'PUT', 'SBJ', 'SUB', 'SUFFIX',
-                'TITLE', 'TMP', 'VC', 'VOC']
+# label of dependencies http://universaldependencies.org/u/dep/
 
+_DEP_LABELS = ['ROOT', 'ACL','ACVLCL', 'ADVMOD', 'AMOD', 'APPOS', 'AUX', 'CASE', 'CC', 'CCOMP',
+               'CLF', 'COMPOUND', 'CONJ', 'COP', 'CSUBJ', 'DEP', 'DET',
+               'DISCOURSE', 'DISLOCATED', 'EXPL', 'FIXED', 'FLAT', 'GOESWITH',
+               'IOBJ', 'LIST', 'MARK', 'NMOD', 'NSUBJ', 'NUMMOD',
+               'OBJ', 'OBL', 'ORPHAN', 'PARATAXIS', 'PUNXT', 'REPARANDUM', 'VOCATIVE',
+               'XCOMP']
 
 _DEP_LABELS_DICT = {label:ix for ix, label in enumerate(_DEP_LABELS)}
 
