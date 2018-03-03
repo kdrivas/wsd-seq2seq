@@ -395,7 +395,7 @@ def pad_seq(seq, max_length):
 def indexes_from_sentence(lang, sentence):
     return [lang.stoi[word] for word in sentence.split(' ')] + [EOS_token]
 
-def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, USE_CUDA=False):
+def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, nlp=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
@@ -405,7 +405,11 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
     for i in range(batch_size):
         id_random = random.choice(id_arr)
         pair = pairs[id_random]
-        arr_dep.append(pair[2])
+        
+        if nlp and return_dep_tree:
+            arr_dep.append(nlp.dependency_parse(pair[0]))
+        elif return_dep_tree:
+            arr_dep.append(pair[2])
         
         id_pairs.append(id_random)
         input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
