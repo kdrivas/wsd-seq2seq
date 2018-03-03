@@ -379,7 +379,7 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
     disamb_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = disamb(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None,train)
+    all_decoder_outputs, target_batches = disamb(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop, train)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, output_lang.n_words), dim=1)
