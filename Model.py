@@ -373,13 +373,13 @@ class Disamb(nn.Module):
 
 ########################## TRAINING PARALLEL ###########################
    
-def train_parallel(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, disamb, disamb_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, USE_CUDA=False):
+def train_parallel(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, disamb, disamb_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None, USE_CUDA=False):
 
     # Zero gradients of both optimizers
     disamb_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = disamb(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train)
+    all_decoder_outputs, target_batches = disamb(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None,train)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, output_lang.n_words), dim=1)
