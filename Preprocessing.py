@@ -36,14 +36,14 @@ EOS_token = 2
 
 # label of dependencies http://universaldependencies.org/u/dep/
 
-_DEP_LABELS = ['ROOT', 'ACL','ACVLCL', 'ADVMOD', 'AMOD', 'APPOS', 'AUX', 'CASE', 'CC', 'CCOMP',
+DEP_LABELS = ['ROOT', 'ACL','ACVLCL', 'ADVMOD', 'AMOD', 'APPOS', 'AUX', 'CASE', 'CC', 'CCOMP',
                'CLF', 'COMPOUND', 'CONJ', 'COP', 'CSUBJ', 'DEP', 'DET',
                'DISCOURSE', 'DISLOCATED', 'EXPL', 'FIXED', 'FLAT', 'GOESWITH',
                'IOBJ', 'LIST', 'MARK', 'NMOD', 'NSUBJ', 'NUMMOD',
                'OBJ', 'OBL', 'ORPHAN', 'PARATAXIS', 'PUNXT', 'REPARANDUM', 'VOCATIVE',
                'XCOMP']
 
-_DEP_LABELS_DICT = {label:ix for ix, label in enumerate(_DEP_LABELS)}
+_DEP_LABELS_DICT = {label:ix for ix, label in enumerate(DEP_LABELS)}
 
 def find_words_cutoff(sentences, ner):
     words_cutoff = []
@@ -464,7 +464,7 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
         #Get adjacency matrix for incoming and outgoing arcs
         for idx_sentence, dep_sentence in enumerate(arr_dep):
             for idx_arc, arc in enumerate(dep_sentence):
-                if(arc[0] != 'ROOT') and arc[0].upper() in _DEP_LABELS:
+                if(arc[0] != 'ROOT') and arc[0].upper() in DEP_LABELS:
                     #get index of words in the sentence
                     arc_1 = int(arc[1]) - 1
                     arc_2 = int(arc[2]) - 1
