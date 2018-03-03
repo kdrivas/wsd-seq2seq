@@ -3,6 +3,7 @@ import time
 import math
 import json
 import codecs
+import matplotlib.pyplot as plt
 
 def as_minutes(s):
     m = math.floor(s / 60)
