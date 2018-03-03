@@ -26,3 +26,16 @@ def load_json(file_path):
     a_new = np.array(b_new)
     
     return a_new
+
+def show_plot(points):
+    plt.figure()
+    fig, ax = plt.subplots()
+    loc = ticker.MultipleLocator(base=1) # put ticks at regular intervals
+    ax.yaxis.set_major_locator(loc)
+    plt.plot(points)
+    
+def plot_losses(train_loss, val_loss, scale):
+    plt.figure(figsize=(10,5))
+    plt.plot(train_loss)
+    plt.plot([(x + 1) * scale - 1 for x in range(len(val_loss))], val_loss)
+    plt.legend(['train loss', 'validation loss'])
