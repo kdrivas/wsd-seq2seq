@@ -34,7 +34,7 @@ PAD_token = 0
 SOS_token = 1
 EOS_token = 2
 
-# label of dependencies http://universaldependencies.org/u/dep/
+# label of dependencies https://nlp.stanford.edu/pubs/USD_LREC14_paper_camera_ready.pdf
 
 DEP_LABELS = ['ROOT', 'ACL','ACVLCL', 'ADVMOD', 'AMOD', 'APPOS', 'AUX', 'CASE', 'CC', 'CCOMP',
                'CLF', 'COMPOUND', 'CONJ', 'COP', 'CSUBJ', 'DEP', 'DET',
@@ -487,8 +487,8 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
                     mask_out[idx_out] = 1
 
 
-    adj_arc_in = torch.LongTensor(np.transpose(adj_arc_in)) 
-    adj_arc_out = torch.LongTensor(np.transpose(adj_arc_out))
+    adj_arc_in = Variable(torch.LongTensor(np.transpose(adj_arc_in)))
+    adj_arc_out = Variable(torch.LongTensor(np.transpose(adj_arc_out)))
 
     adj_lab_in = Variable(torch.LongTensor(adj_lab_in))
     adj_lab_out = Variable(torch.LongTensor(adj_lab_out))
