@@ -37,7 +37,7 @@ class Evaluator():
         
         encoder_hidden = self.encoder.init_hidden(1)
         encoder_cell = self.encoder.init_cell(1)
-        encoder_outputs, encoder_hidden, encoder_cell = self.encoder(input_variable, input_length, encoder_hidden, encoder_cell)
+        encoder_outputs, encoder_hidden, encoder_cell = self.encoder(input_variable, encoder_hidden, encoder_cell)
         
         decoder_input = Variable(torch.LongTensor([[SOS_token]]))
         decoder_context = Variable(torch.zeros(1, self.decoder.hidden_size))
@@ -79,7 +79,9 @@ class Evaluator():
                         decoder_input = Variable(torch.LongTensor([[ni]]))
                         if self.USE_CUDA: decoder_input = decoder_input.cuda()
                         new_beam.decoder_input = decoder_input                        
-                        new_beams.append(new_beam)                    
+                        new_beams.append(new_beam)   
+                        
+            torch.cuda.empty_cache()
             
             new_beams = {beam: np.mean(beam.sequence_log_probs) for beam in new_beams}
             beams = sorted(new_beams, key=new_beams.get, reverse=True)[:k_beams]

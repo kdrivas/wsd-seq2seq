@@ -30,7 +30,7 @@ class Encoder_rnn(nn.Module):
             
         self.lstm = nn.LSTM(emb_size, hidden_size, n_layers, dropout=self.dropout, bidirectional=True, batch_first=False)
         
-    def forward(self, input_seqs, input_lengths, hidden = None, cell = None):
+    def forward(self, input_seqs, hidden = None, cell = None):
         embedded = self.embedding(input_seqs)
 
         self.lstm.flatten_parameters() 
