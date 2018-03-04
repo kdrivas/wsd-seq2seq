@@ -380,9 +380,6 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
 
 def process_instance_LM(text, word_dict, verbose = False):
     pairs = []
-    
-    if is_train:
-        sense_ids = re.findall(r'senseid=\"(.*?)\"', text, re.DOTALL)
         
     context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
     word_ambiguos = re.findall(r'<head>(.*?)</head>', context[0], re.DOTALL)
