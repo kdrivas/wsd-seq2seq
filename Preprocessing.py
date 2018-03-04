@@ -390,8 +390,8 @@ def process_instance_LM(text, word_dict, verbose = False):
     sentences = join_words(c, word_dict) 
     
     if verbose:
-        print("------ sentence")
-        print(sentence)
+        print("------ sentences")
+        print(sentences)
         print()
 
     return sentences
