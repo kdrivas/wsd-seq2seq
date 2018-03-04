@@ -327,7 +327,7 @@ class Disamb(nn.Module):
         hidden_init = self.encoder.init_hidden(self.batch_size)
         cell_init = self.encoder.init_cell(self.batch_size)
         
-        encoder_outputs, encoder_hidden, encoder_cell = self.encoder(input_batches, input_lengths, hidden_init, cell_init)
+        encoder_outputs, encoder_hidden, encoder_cell = self.encoder(input_batches, hidden_init, cell_init)
 
         if self.gcn:
             encoder_hidden = self.gcn(encoder_hidden,
@@ -378,7 +378,7 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
     # Zero gradients of both optimizers
     disamb_optimizer.zero_grad()
     loss = 0 # Added onto for each word
-
+    
     all_decoder_outputs, target_batches = disamb(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop)
     
     # Loss calculation and backpropagation
