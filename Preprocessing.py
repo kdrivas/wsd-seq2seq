@@ -264,7 +264,6 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
     
     c = re.split(r'[\.|:|?|!]', context[0])
     
-    c = join_words(c, word_dict)
     words_cutoff = find_words_cutoff(c, ner)
     
     for ix, sent in enumerate(c):
@@ -305,20 +304,18 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
             for s in sentences_prune:
 
                 for sense_id in sense_ids:   
-                    pair = [[],[],[],[],[]]
+                    pair = [[],[],[],[]]
                     sense_id = re.sub(r'%|:', '', sense_id)
                     if(prune_sentence):
                         pair[0] = s
                         pair[1] = re.sub(word_ambiguos[0], word_ambiguos[0] + '_' + sense_id, s)
-                        pair[2] = nlp.dependency_parse(pair[0])
-                        pair[3] = word_ambiguos[0] + '_' + sense_id
-                        pair[4] = ix_ins
+                        pair[2] = word_ambiguos[0] + '_' + sense_id
+                        pair[3] = ix_ins
                     else:
                         pair[0] = re.sub(r'<head>(.*?)</head>', word_ambiguos[0], s)
                         pair[1] = re.sub(r'<head>(.*?)</head>', word_ambiguos[0] + '_' + sense_id, s)
-                        pair[2] = nlp.dependency_parse(pair[0])
-                        pair[3] = word_ambiguos[0] + '_' + sense_id
-                        pair[4] = ix_ins
+                        pair[2] = word_ambiguos[0] + '_' + sense_id
+                        pair[3] = ix_ins
                     pairs.append(pair)
         
     return pairs
@@ -348,7 +345,8 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
     parser=StanfordParser(path_model + "stanford-parser-full-2017-06-09/stanford-parser.jar", \
                      path_model + "stanford-parser-full-2017-06-09/stanford-parser-3.8.0-models.jar")
 
-    nlp = StanfordCoreNLP(path_model + "stanford-corenlp-full-2018-02-27/")
+    #nlp = StanfordCoreNLP(path_model + "stanford-corenlp-full-2018-02-27/")
+    nlp = None
     
     word_dict = enchant.Dict('en_US')
     
@@ -365,9 +363,21 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         data = '<instance' + instance + '</instance>'
         data = re.sub(r'[^\x20-\x7E]', '', data)
         data = re.sub(r' n\'t', 'n\'t', data)
-        data = re.sub(r'he\'s', 'he is', data)
-        data = re.sub(r'u \'d', 'uld', data)
+        data = re.sub(r'wou \'d', 'uld', data)
+
+        data = re.sub(r' \'re', ' are', data)
+        data = re.sub(r' \'ve', ' have', data)
+        
+        data = re.sub(r'it \'s', 'it is', data)
+        data = re.sub(r'he \'s', 'he is', data)
+        data = re.sub(r'i \'m', 'i am', data)
+        data = re.sub(r'It \'s', 'it is', data)
+        data = re.sub(r'He \'s', 'he is', data)
+        data = re.sub(r'I \'m', 'i am', data)
+        
+        data = re.sub(r' \'d', 'd', data)
         data = re.sub(r'&', '', data)
+        
         if(is_train):
             pairs.extend(process_instance(ix_ins, data, ner, parser, word_dict, nlp, is_train, None, prune_sentence, verbose))
         else:
@@ -378,7 +388,7 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
 
 ###################### GET LANGUAGE MODEL DATA ############################
 
-def process_instance_LM(text, word_dict, verbose = False):
+def process_instance_LM(text, verbose = False):
     pairs = []
         
     context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
@@ -386,20 +396,16 @@ def process_instance_LM(text, word_dict, verbose = False):
     context = re.sub(r'<head>(.*?)</head>', word_ambiguos[0], context[0])
     
     c = re.split(r'[\.]', context)
-    
-    sentences = join_words(c, word_dict) 
-    
+        
     if verbose:
         print("------ sentences")
-        print(sentences)
+        print(c)
         print()
 
-    return sentences
+    return c
 
 def construct_LM_data(path_source, verbose=True):
-    
-    word_dict = enchant.Dict('en_US')
-    
+        
     with open(path_source, 'r') as f:
         xml = f.read() 
     
@@ -408,8 +414,19 @@ def construct_LM_data(path_source, verbose=True):
 
     for ix_ins, instance in enumerate(instances):
         data = '<instance' + instance + '</instance>'
+        data = data.lower()
+        
         data = re.sub(r'[^\x20-\x7E]', '', data)
-        pairs.extend(process_instance_LM(data, word_dict, verbose))
+        data = re.sub(r' n\'t', 'nt', data)
+        data = re.sub(r' \'re', ' are', data)
+        data = re.sub(r' \'ve', ' have', data)
+        data = re.sub(r'it \'s', 'it is', data)
+        data = re.sub(r'he \'s', 'he is', data)
+        data = re.sub(r'i \'m', 'i am', data)
+        data = re.sub(r' \'d', 'd', data)
+        data = re.sub(r'wou \'d', 'uld', data)
+        
+        pairs.extend(process_instance_LM(data, verbose))
             
     return np.array(pairs)
 
