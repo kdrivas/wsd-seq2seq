@@ -409,10 +409,6 @@ def construct_LM_data(path_source, verbose=True):
     for ix_ins, instance in enumerate(instances):
         data = '<instance' + instance + '</instance>'
         data = re.sub(r'[^\x20-\x7E]', '', data)
-        data = re.sub(r' n\'t', 'n\'t', data)
-        data = re.sub(r'he\'s', 'he is', data)
-        data = re.sub(r'u \'d', 'uld', data)
-        data = re.sub(r'&', '', data)
         pairs.extend(process_instance_LM(data, word_dict, verbose))
             
     return np.array(pairs)
@@ -432,23 +428,23 @@ def pad_seq(seq, max_length):
     return seq
 
 def indexes_from_sentence(lang, sentence):
-    return [lang.stoi[word] for word in sentence.split(' ')] + [EOS_token]
+    return [lang.vocab.stoi[word] for word in sentence.split(' ')] + [EOS_token]
 
-def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, nlp=None, USE_CUDA=False):
+def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
-    arr_dep = []
+    arr_aux = []
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
         id_random = random.choice(id_arr)
         pair = pairs[id_random]
         
-        if nlp and return_dep_tree:
-            arr_dep.append(nlp.dependency_parse(pair[0]))
+        if arr_dep and return_dep_tree:
+            arr_aux.append(arr_dep[id_random])
         elif return_dep_tree:
-            arr_dep.append(pair[2])
+            arr_aux.append(pair[2])
         
         id_pairs.append(id_random)
         input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
@@ -503,7 +499,7 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
     if return_dep_tree:
         
         #Get adjacency matrix for incoming and outgoing arcs
-        for idx_sentence, dep_sentence in enumerate(arr_dep):
+        for idx_sentence, dep_sentence in enumerate(arr_aux):
             for idx_arc, arc in enumerate(dep_sentence):
                 if(arc[0] != 'ROOT') and arc[0].upper() in DEP_LABELS:
                     #get index of words in the sentence
