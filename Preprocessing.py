@@ -376,6 +376,54 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
     
     return np.array(pairs)
 
+###################### GET LANGUAGE MODEL DATA ############################
+
+def process_instance_LM(word_dict, is_train = True, verbose = False):
+    pairs = []
+    
+    if is_train:
+        sense_ids = re.findall(r'senseid=\"(.*?)\"', text, re.DOTALL)
+        
+    context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
+    word_ambiguos = re.findall(r'<head>(.*?)</head>', context[0], re.DOTALL)
+    context = re.sub(r'<head>(.*?)</head>', word_ambiguos[0], context[0])
+    
+    c = re.split(r'[\.]', context)
+    
+    sentences = join_words(c, word_dict) 
+    
+    if verbose:
+        print("------ sentence")
+        print(sentence)
+        print()
+
+    return sentences
+
+def construct_LM_data(path_source, is_train = True, verbose=True):
+    
+    word_dict = enchant.Dict('en_US')
+    
+    with open(path_source, 'r') as f:
+        xml = f.read() 
+    
+    instances = re.findall(r'<instance(.*?)</instance>', xml, re.DOTALL)
+    pairs= []
+
+    for ix_ins, instance in enumerate(instances):
+        data = '<instance' + instance + '</instance>'
+        data = re.sub(r'[^\x20-\x7E]', '', data)
+        data = re.sub(r' n\'t', 'n\'t', data)
+        data = re.sub(r'he\'s', 'he is', data)
+        data = re.sub(r'u \'d', 'uld', data)
+        data = re.sub(r'&', '', data)
+        if(is_train):
+            pairs.extend(process_instance_LM(word_dict, is_train, verbose))
+        else:
+            pairs.extend(process_instance_LM(word_dict, is_train, verbose))
+        
+    
+    return np.array(pairs)
+
 ###################### BATCHES ############################
 
 def get_all_id(pairs):
