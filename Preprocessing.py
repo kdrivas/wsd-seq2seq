@@ -378,7 +378,7 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
 
 ###################### GET LANGUAGE MODEL DATA ############################
 
-def process_instance_LM(word_dict, is_train = True, verbose = False):
+def process_instance_LM(text, word_dict, verbose = False):
     pairs = []
     
     if is_train:
@@ -399,7 +399,7 @@ def process_instance_LM(word_dict, is_train = True, verbose = False):
 
     return sentences
 
-def construct_LM_data(path_source, is_train = True, verbose=True):
+def construct_LM_data(path_source, verbose=True):
     
     word_dict = enchant.Dict('en_US')
     
@@ -416,12 +416,8 @@ def construct_LM_data(path_source, is_train = True, verbose=True):
         data = re.sub(r'he\'s', 'he is', data)
         data = re.sub(r'u \'d', 'uld', data)
         data = re.sub(r'&', '', data)
-        if(is_train):
-            pairs.extend(process_instance_LM(word_dict, is_train, verbose))
-        else:
-            pairs.extend(process_instance_LM(word_dict, is_train, verbose))
-        
-    
+        pairs.extend(process_instance_LM(data, word_dict, verbose))
+            
     return np.array(pairs)
 
 ###################### BATCHES ############################
