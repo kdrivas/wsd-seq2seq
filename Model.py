@@ -402,7 +402,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input
     cell = encoder.init_cell(batch_size)
     hidden = encoder.init_hidden(batch_size)
         
-    encoder_outputs, encoder_hidden, encoder_cell = encoder(input_batches, input_lengths, hidden, cell)
+    encoder_outputs, encoder_hidden, encoder_cell = encoder(input_batches, hidden, cell)
     decoder_input = Variable(torch.LongTensor([SOS_token] * batch_size))
     
     if gcn:
