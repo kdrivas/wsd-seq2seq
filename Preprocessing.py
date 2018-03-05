@@ -676,12 +676,14 @@ def prepare_data(pairs_train, pairs_test, max_length):
 def remove_char(pairs):
     rem_pairs = []
     for pair in pairs:
-        pair[0] = re.sub(r"[?|¿|;|!|\-|\(|\)|'|:|%|=|*|+]", '', pair[0])
+        pair[0] = re.sub(r"[?|¿|;|!|\(|\)|'|:|%|=|*|+]", '', pair[0])
         pair[0] = pair[0].replace('/', ' ')
+        pair[0] = pair[0].replace('-', ' ')
         
-        pair[1] = re.sub(r"[?|¿|;|!|\-|\(|\)|'|:|%|=|*|+]", '', pair[1])
+        pair[1] = re.sub(r"[?|¿|;|!|\(|\)|'|:|%|=|*|+]", '', pair[1])
         pair[1] = pair[1].replace('/', ' ')
-        rem_pairs.append(pair)
+        pair[1] = pair[1].replace('-', ' ')
+        rem_pairs.append(pair)  
         
     return np.array(rem_pairs)
     

@@ -340,7 +340,7 @@ class Disamb(nn.Module):
         decoder_hidden = encoder_hidden
         decoder_cell = encoder_cell
 
-        all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], self.batch_size, output_lang.n_words))
+        all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], self.batch_size, len(output_lang.vocab.itos)))
 
         if self.USE_CUDA:
             all_decoder_outputs = all_decoder_outputs.cuda()
@@ -382,7 +382,7 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
     all_decoder_outputs, target_batches = disamb(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop)
     
     # Loss calculation and backpropagation
-    log_probs = F.log_softmax(all_decoder_outputs.view(-1, output_lang.n_words), dim=1)
+    log_probs = F.log_softmax(all_decoder_outputs.view(-1, len(output_lang.vocab.itos)), dim=1)
     loss = criterion(log_probs, target_batches.view(-1))
     
     if train:
