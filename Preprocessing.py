@@ -673,8 +673,23 @@ def prepare_data(pairs_train, pairs_test, max_length):
     return sentence, sense, pairs_train, pairs_test
 
 ############## GENERATE VECTORS ##########################
-
+def remove_char(pairs):
+    rem_pairs = []
+    for pair in pairs:
+        pair[0] = re.sub(r"[?|¿|;|!|\-|\(|\)|'|:|%|=|*|+]", '', pair[0])
+        pair[0] = pair[0].replace('/', ' ')
+        
+        pair[1] = re.sub(r"[?|¿|;|!|\-|\(|\)|'|:|%|=|*|+]", '', pair[1])
+        pair[1] = pair[1].replace('/', ' ')
+        rem_pairs.append(pair)
+        
+    return np.array(rem_pairs)
+    
 def construct_vectors(pairs, vector_name_in='fasttext.en.300d', vector_name_out='fasttext.en.300d', fill_rare_words=True):
+    
+    normalize_pairs(pairs)
+    remove_char(pairs)
+    
     lang_in = pd.DataFrame(pairs[:, 0], columns=["lang_in"])
     lang_out = pd.DataFrame(pairs[:, 1], columns=["lang_out"])
 
