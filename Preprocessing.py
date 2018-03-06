@@ -30,9 +30,9 @@ import torchtext
 from torchtext import data
 from torchtext import datasets
 
-PAD_token = 0
-SOS_token = 1
-EOS_token = 2
+PAD_token = 1
+SOS_token = 2
+EOS_token = 3
 
 # label of dependencies https://nlp.stanford.edu/pubs/USD_LREC14_paper_camera_ready.pdf
 
@@ -440,12 +440,12 @@ def get_all_id(pairs):
         
     return id_pairs
 
-def pad_seq(seq, max_length):
-    seq += [PAD_token for i in range(max_length - len(seq))]
+def pad_seq(lang, seq, max_length):
+    seq += [lang.vocab.stoi["<pad>"] for i in range(max_length - len(seq))]
     return seq
 
 def indexes_from_sentence(lang, sentence):
-    return [lang.vocab.stoi[word] for word in sentence]
+    return [lang.vocab.stoi[word] for word in sentence] + [lang.vocab.stoi["<eos>"]]
 
 def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
     input_seqs = []
@@ -471,9 +471,9 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
     input_seqs, target_seqs = zip(*seq_pairs)
     
     input_lengths = [len(s) for s in input_seqs]
-    input_padded = [pad_seq(s, max(input_lengths)) for s in input_seqs]
+    input_padded = [pad_seq(input_lang, s, max(input_lengths)) for s in input_seqs]
     target_lengths = [len(s) for s in target_seqs]
-    target_padded = [pad_seq(s, max(target_lengths)) for s in target_seqs]
+    target_padded = [pad_seq(output_lang, s, max(target_lengths)) for s in target_seqs]
 
     input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
     target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
