@@ -463,7 +463,7 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance=None
         if id_pair >= len(pairs):
             break
         
-        pair = pairs[id_random]
+        pair = pairs[id_pair]
         
         if arr_dep and return_dep_tree:
             arr_aux.append(arr_dep[id_pair])
