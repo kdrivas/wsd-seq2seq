@@ -447,7 +447,7 @@ def pad_seq(seq, max_length):
 def indexes_from_sentence(lang, sentence):
     return [lang.vocab.stoi[word] for word in sentence.split(' ')] + [EOS_token]
 
-def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
+def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance=None, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
@@ -455,15 +455,22 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
-        id_random = random.choice(id_arr)
-        pair = pairs[id_random]
+        if pos_instance:
+            id_pair = pos_instance + i
+        else:
+            id_pair = random.choice(id_arr)
+        
+        if id_pair >= len(pairs):
+            break
+        
+        pair = pairs[id_pair]
         
         if arr_dep and return_dep_tree:
-            arr_aux.append(arr_dep[id_random])
+            arr_aux.append(arr_dep[id_pair])
         elif return_dep_tree:
             arr_aux.append(pair[2])
         
-        id_pairs.append(id_random)
+        id_pairs.append(id_pair)
         input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
         target_seqs.append(indexes_from_sentence(output_lang, pair[1]))
 
@@ -561,7 +568,10 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
         mask_out = mask_out.cuda()
         mask_loop = mask_loop.cuda()
         
-    return input_var, input_lengths, target_var, target_lengths,\
+    if pos_instance:
+        pos_instance += batch_size
+        
+    return pos_instance, input_var, input_lengths, target_var, target_lengths,\
             adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
             id_pairs
 
