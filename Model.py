@@ -474,6 +474,7 @@ def train(input_lang, output_lang, input_batches, input_lengths, target_batches,
         encoder_optimizer.step()
         decoder_optimizer.step()
         if gcn:
+            torch.nn.utils.clip_grad_norm(gcn.parameters(), clip)
             gcn_optimizer.step()
     
     del all_decoder_outputs
