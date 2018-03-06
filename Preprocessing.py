@@ -445,7 +445,7 @@ def pad_seq(seq, max_length):
     return seq
 
 def indexes_from_sentence(lang, sentence):
-    return [lang.vocab.stoi[word] for word in sentence.split(' ')] + [EOS_token]
+    return [lang.vocab.stoi[word] for word in sentence]
 
 def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance=None, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
     input_seqs = []
@@ -471,17 +471,15 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance=None
             arr_aux.append(pair[2])
         
         id_pairs.append(id_pair)
-        input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
-        target_seqs.append(indexes_from_sentence(output_lang, pair[1]))
-
-    seq_pairs = sorted(zip(input_seqs, target_seqs), key=lambda p: len(p[0]), reverse=True)
-    input_seqs, target_seqs = zip(*seq_pairs)
-    
+        input_seqs.append(pair[0].split())
+        target_seqs.append(pair[1].split())
+  
     input_lengths = [len(s) for s in input_seqs]
-    input_padded = [pad_seq(s, max(input_lengths)) for s in input_seqs]
     target_lengths = [len(s) for s in target_seqs]
-    target_padded = [pad_seq(s, max(target_lengths)) for s in target_seqs]
-
+    
+    input_padded = [indexes_from_sentence(input_lang, seq) for seq in input_lang.pad(input_seqs)]
+    target_padded = [indexes_from_sentence(output_lang, seq) for seq in output_lang.pad(target_seqs)]
+    
     input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
     target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
     
@@ -708,9 +706,9 @@ def construct_vectors(pairs, vector_name_in='fasttext.en.300d', vector_name_out=
     lang_in.to_csv('lang_in.csv', index=False)
     lang_out.to_csv('lang_out.csv', index=False)
 
-    lang_in = data.Field(sequential=True, lower=True)
-    lang_out = data.Field(sequential=True, lower=True)
-
+    lang_in = data.Field(sequential=True, lower=True, init_token="<sos>", eos_token="<eos>")
+    lang_out = data.Field(sequential=True, lower=True, init_token="<sos>", eos_token="<eos>")
+    
     mt_lang_in = data.TabularDataset(
         path='lang_in.csv', format='csv',
         fields=[('lang_in', lang_in)])
