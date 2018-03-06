@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
+from torch.nn import Parameter
 
 from Preprocessing import SOS_token
 
@@ -171,7 +172,8 @@ class SintacticGCN(nn.Module):
                  dropout = 0.,
                  in_arcs = True,
                  out_arcs = True,
-                 batch_first = False):       
+                 batch_first = False,
+                 USE_CUDA=False):       
         super(SintacticGCN, self).__init__()      
 
         self.in_arcs = in_arcs
@@ -187,35 +189,35 @@ class SintacticGCN(nn.Module):
         self.sigmoid = nn.Sigmoid()
         
         if in_arcs:
-            self.V_in = Variable(torch.FloatTensor(self.num_inputs, self.num_units))
+            self.V_in = Parameter(torch.FloatTensor(self.num_inputs, self.num_units))
             nn.init.xavier_normal(self.V_in)
             
-            self.b_in = Variable(torch.FloatTensor(num_labels, self.num_units))
+            self.b_in = Parameter(torch.FloatTensor(num_labels, self.num_units))
             nn.init.constant(self.b_in, 0)
             
-            self.V_in_gate = Variable(torch.FloatTensor(self.num_inputs, 1))
+            self.V_in_gate = Parameter(torch.FloatTensor(self.num_inputs, 1))
             nn.init.uniform(self.V_in_gate)
             
-            self.b_in_gate = Variable(torch.FloatTensor(num_labels, 1))
+            self.b_in_gate = Parameter(torch.FloatTensor(num_labels, 1))
             nn.init.constant(self.b_in_gate, 1)
 
         if out_arcs:
-            self.V_out = Variable(torch.FloatTensor(self.num_inputs, self.num_units))
+            self.V_out = Parameter(torch.FloatTensor(self.num_inputs, self.num_units))
             nn.init.xavier_normal(self.V_out)
             
-            self.b_out = Variable(torch.FloatTensor(num_labels, self.num_units))
+            self.b_out = Parameter(torch.FloatTensor(num_labels, self.num_units))
             nn.init.constant(self.b_in, 0)
             
-            self.V_out_gate = Variable(torch.FloatTensor(self.num_inputs, 1))
+            self.V_out_gate = Parameter(torch.FloatTensor(self.num_inputs, 1))
             nn.init.uniform(self.V_out_gate)
             
-            self.b_out_gate = Variable(torch.FloatTensor(num_labels, 1))
+            self.b_out_gate = Parameter(torch.FloatTensor(num_labels, 1))
             nn.init.constant(self.b_out_gate, 1)
         
-        self.W_self_loop = Variable(torch.FloatTensor(self.num_inputs, self.num_units))
+        self.W_self_loop = Parameter(torch.FloatTensor(self.num_inputs, self.num_units))
         nn.init.xavier_normal(self.W_self_loop)        
         
-        self.W_self_loop_gate = Variable(torch.FloatTensor(self.num_inputs, 1))
+        self.W_self_loop_gate = Parameter(torch.FloatTensor(self.num_inputs, 1))
         nn.init.uniform(self.W_self_loop_gate)
 
     def forward(self, encoder_outputs,
@@ -229,7 +231,7 @@ class SintacticGCN(nn.Module):
         
         batch_size, seq_len, _ = encoder_outputs.shape
         max_degree = 1
-        input_ = encoder_outputs.view((batch_size * seq_len , self.num_inputs))  # [b* t, h]
+        input_ = encoder_outputs.view((batch_size * seq_len , self.num_inputs))  # [b* t, h]        
         
         if self.in_arcs:
             input_in = torch.mm(input_, self.V_in)  # [b* t, h] * [h,h] = [b*t, h]
@@ -330,7 +332,7 @@ class Disamb(nn.Module):
         encoder_outputs, encoder_hidden, encoder_cell = self.encoder(input_batches, hidden_init, cell_init)
 
         if self.gcn:
-            encoder_hidden = self.gcn(encoder_hidden,
+            encoder_outputs = self.gcn(encoder_outputs,
                              adj_arc_in, adj_arc_out,
                              adj_lab_in, adj_lab_out,
                              mask_in, mask_out,  
@@ -406,7 +408,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input
     decoder_input = Variable(torch.LongTensor([SOS_token] * batch_size))
     
     if gcn:
-        encoder_hidden = gcn(encoder_hidden,
+        encoder_outputs = gcn(encoder_outputs,
                              adj_arc_in, adj_arc_out,
                              adj_lab_in, adj_lab_out,
                              mask_in, mask_out,  
