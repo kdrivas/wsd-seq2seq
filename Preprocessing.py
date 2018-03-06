@@ -447,6 +447,124 @@ def pad_seq(seq, max_length):
 def indexes_from_sentence(lang, sentence):
     return [lang.vocab.stoi[word] for word in sentence]
 
+def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
+    input_seqs = []
+    target_seqs = []
+    id_pairs = []
+    arr_aux = []
+    
+    id_arr = list(range(len(pairs)))
+    for i in range(batch_size):
+        id_random = random.choice(id_arr)
+        pair = pairs[id_random]
+        
+        if arr_dep and return_dep_tree:
+            arr_aux.append(arr_dep[id_random])
+        elif return_dep_tree:
+            arr_aux.append(pair[2])
+        
+        id_pairs.append(id_random)
+        input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
+        target_seqs.append(indexes_from_sentence(output_lang, pair[1]))
+
+    seq_pairs = sorted(zip(input_seqs, target_seqs), key=lambda p: len(p[0]), reverse=True)
+    input_seqs, target_seqs = zip(*seq_pairs)
+    
+    input_lengths = [len(s) for s in input_seqs]
+    input_padded = [pad_seq(s, max(input_lengths)) for s in input_seqs]
+    target_lengths = [len(s) for s in target_seqs]
+    target_padded = [pad_seq(s, max(target_lengths)) for s in target_seqs]
+
+    input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
+    target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
+    
+    if USE_CUDA:
+        input_var = input_var.cuda()
+        target_var = target_var.cuda()
+
+#
+#     nlp = StanfordCoreNLP(r'/home/krivas/projects/wsd-v2/stanford-corenlp-full-2018-01-31/')
+
+#     sentence = 'which you step on to activate it'
+#     de = nlp.dependency_parse(sentence)
+
+#     arr_dep = []
+#     arr_dep.append(de)
+#     arr_dep.append(de)
+#     arr_dep.append(de)
+#     arr_dep.append(de)
+    
+    max_length = max(input_lengths)
+    matrix_size = batch_size * max_length
+    
+    #Initialize adjancencies matrixes
+
+    adj_arc_in = np.zeros((matrix_size, 2), dtype='int32')
+    adj_lab_in = np.zeros(matrix_size, dtype='int32')
+
+    adj_arc_out = np.zeros((matrix_size, 2), dtype='int32')
+    adj_lab_out = np.zeros(matrix_size, dtype='int32')
+    
+    #Initialize mask matrix
+
+    mask_in = np.zeros(matrix_size, dtype='float32')
+    mask_out = np.zeros(matrix_size, dtype='float32')
+
+    mask_loop = np.ones((matrix_size, 1), dtype='float32')
+    
+    # Enable dependency label batch
+    if return_dep_tree:
+        
+        #Get adjacency matrix for incoming and outgoing arcs
+        for idx_sentence, dep_sentence in enumerate(arr_aux):
+            for idx_arc, arc in enumerate(dep_sentence):
+                if(arc[0] != 'ROOT') and arc[0].upper() in DEP_LABELS:
+                    #get index of words in the sentence
+                    arc_1 = int(arc[1]) - 1
+                    arc_2 = int(arc[2]) - 1
+
+                    idx_in = (idx_arc) + idx_sentence * max_length
+                    idx_out = (arc_2) + idx_sentence * max_length
+
+                    #Make adjacency matrix for incoming arcs
+                    adj_arc_in[idx_in] = np.array([idx_sentence, arc_2]) 
+                    adj_lab_in[idx_in] = np.array([_DEP_LABELS_DICT[arc[0].upper()]]) 
+
+                    #Setting mask to consider that index
+                    mask_in[idx_in] = 1
+
+                    #Make adjacency matrix for outgoing arcs
+                    adj_arc_out[idx_out] = np.array([idx_sentence, arc_1])   
+                    adj_lab_out[idx_out] = np.array([_DEP_LABELS_DICT[arc[0].upper()]])
+
+                    #Setting mask to consider that index
+                    mask_out[idx_out] = 1
+
+
+    adj_arc_in = Variable(torch.LongTensor(np.transpose(adj_arc_in)))
+    adj_arc_out = Variable(torch.LongTensor(np.transpose(adj_arc_out)))
+
+    adj_lab_in = Variable(torch.LongTensor(adj_lab_in))
+    adj_lab_out = Variable(torch.LongTensor(adj_lab_out))
+
+    mask_in = Variable(torch.FloatTensor(mask_in.reshape((matrix_size, 1))))
+    mask_out = Variable(torch.FloatTensor(mask_out.reshape((matrix_size, 1))))
+    mask_loop = Variable(torch.FloatTensor(mask_loop))
+    
+    if USE_CUDA:
+        adj_arc_in = adj_arc_in.cuda()
+        adj_arc_out = adj_arc_out.cuda()
+        adj_lab_in = adj_lab_in.cuda()
+        adj_lab_out = adj_lab_out.cuda()
+        
+        mask_in = mask_in.cuda()
+        mask_out = mask_out.cuda()
+        mask_loop = mask_loop.cuda()
+        
+    return input_var, input_lengths, target_var, target_lengths,\
+            adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
+id_pairs
+
 def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance=None, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
