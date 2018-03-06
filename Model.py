@@ -29,7 +29,7 @@ class Encoder_rnn(nn.Module):
             if not use_optim_emb:
                 self.embedding.weight.required_grad = False
             
-        self.lstm = nn.LSTM(emb_size, hidden_size, n_layers, dropout=self.dropout, bidirectional=True, batch_first=False)
+        self.lstm = nn.LSTM(emb_size, hidden_size, n_layers, dropout=self.dropout, bidirectional=True)
         
     def forward(self, input_seqs, hidden = None, cell = None):
         embedded = self.embedding(input_seqs)
@@ -302,7 +302,11 @@ class SintacticGCN(nn.Module):
         potentials_masked_ = self.relu(potentials_masked_)
 
         result_ = potentials_masked_.permute(1, 0).contiguous()   # [b * t, h]
-        result_ = result_.view((batch_size, seq_len, self.num_units))  # [ b, t, h]
+        
+        if not self.batch_first:
+            result_ = result_.view((seq_len, batch_size, self.num_units))  # [ b, t, h]
+        else:
+            result_ = result_.view((batch_size, seq_len, self.num_units))
 
         return result_    
 
@@ -417,7 +421,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input
     decoder_hidden = encoder_hidden
     decoder_cell = encoder_cell
 
-    all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], batch_size, output_lang.n_words))
+    all_decoder_outputs = Variable(torch.zeros(target_batches.data.size()[0], batch_size, len(output_lang.vocab.itos)))
 
     if USE_CUDA:
         all_decoder_outputs = all_decoder_outputs.cuda()
