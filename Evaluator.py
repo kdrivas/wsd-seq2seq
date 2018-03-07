@@ -113,7 +113,7 @@ class Evaluator():
         print('<', output_sentence)
         print('')
         
-    def evaluate_acc(self, id_pairs, pairs, answer_senses, k_beams=3, verbose=False):
+    def evaluate_acc(self, id_pairs, pairs, senses_all, targets_all, k_beams=3, verbose=False):
         
         hint = 0
         total = 0
@@ -132,15 +132,15 @@ class Evaluator():
                 print(answer_senses[ix_answer])
                 print()
                 
-            total += answer_sense[ix_answer][1]
+            total += targets_all[ix_answer]
             cont = 0
             for token in tokens:    
-                for (sense, times) in answer_senses[ix_answer]:
+                for sense in senses_all[ix_answer]:
                     sense = re.sub('[!:%#$]', '', sense)
                     if(sense in token):
                         hint += 1
                         cont += 1
-                        if cont == times:
+                        if cont == targets_all[ix_answer]:
                             break
                     
         return hint * 1.0 / total     
