@@ -261,6 +261,8 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
         
     context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
     word_ambiguos = re.findall(r'<head>(.*?)</head>', context[0], re.DOTALL)
+    aux = re.sub(r'\[(.*?)\]', '', context)
+    aux = re.sub(r'&(.*?);', '', aux)
     
     c = re.split(r'[\.|:|?|!]', context[0])
     
@@ -330,6 +332,7 @@ def load_senses(path):
             words = line.split()
             for ix, word in enumerate(words):
                 if ix > 1:
+                    word = re.sub(r'%|:', '', word)
                     senses.append(word)
                     
             senses_all.append(senses)
@@ -376,6 +379,8 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         data = re.sub(r'I \'m', 'i am', data)
         
         data = re.sub(r' \'d', 'd', data)
+        data = re.sub(r'\[(.*?)\]', '', data)
+        data = re.sub(r'&(.*?);', '', data)
         data = re.sub(r'&', '', data)
         
         if(is_train):
