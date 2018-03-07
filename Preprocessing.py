@@ -569,9 +569,11 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, ret
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
-        id_pair = pos_instance + i
-        if id_pair >= len(pairs):
-            break
+        id_pair = pos_instance
+        pos_instance += 1
+        
+        if pos_instance >= len(pairs):
+            pos_instance = 0
             
         pair = pairs[id_pair]
         
@@ -677,8 +679,6 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, ret
         mask_in = mask_in.cuda()
         mask_out = mask_out.cuda()
         mask_loop = mask_loop.cuda()
-        
-    pos_instance += batch_size
         
     return pos_instance, input_var, input_lengths, target_var, target_lengths,\
             adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
