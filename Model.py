@@ -374,6 +374,8 @@ class Disamb(nn.Module):
         del decoder_output
         del decoder_hidden
         del decoder_attn
+        torch.cuda.empty_cache()
+
         
         return all_decoder_outputs, target_batches    
 
@@ -398,6 +400,7 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
     
     del all_decoder_outputs
     del target_batches
+    torch.cuda.empty_cache()
     
     return loss.data[0]
  
@@ -409,7 +412,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input
     hidden = encoder.init_hidden(batch_size)
         
     encoder_outputs, encoder_hidden, encoder_cell = encoder(input_batches, hidden, cell)
-    decoder_input = Variable(torch.LongTensor([SOS_token] * batch_size))
+    decoder_input = Variable(torch.LongTensor([input_lang.vocab.stoi["<sos>"]] * batch_size))
     
     if gcn:
         encoder_outputs = gcn(encoder_outputs,
