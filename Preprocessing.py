@@ -261,6 +261,8 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
         
     context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
     word_ambiguos = re.findall(r'<head>(.*?)</head>', context[0], re.DOTALL)
+    aux = re.sub(r'\[(.*?)\]', '', context)
+    aux = re.sub(r'&(.*?);', '', aux)
     
     c = re.split(r'[\.|:|?|!]', context[0])
     
@@ -330,6 +332,7 @@ def load_senses(path):
             words = line.split()
             for ix, word in enumerate(words):
                 if ix > 1:
+                    word = re.sub(r'%|:', '', word)
                     senses.append(word)
                     
             senses_all.append(senses)
@@ -376,6 +379,8 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         data = re.sub(r'I \'m', 'i am', data)
         
         data = re.sub(r' \'d', 'd', data)
+        data = re.sub(r'\[(.*?)\]', '', data)
+        data = re.sub(r'&(.*?);', '', data)
         data = re.sub(r'&', '', data)
         
         if(is_train):
@@ -579,9 +584,11 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, ret
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
-        id_pair = pos_instance + i
-        if id_pair >= len(pairs):
-            break
+        id_pair = pos_instance
+        pos_instance += 1
+        
+        if pos_instance >= len(pairs):
+            pos_instance = 0
             
         pair = pairs[id_pair]
         
@@ -687,8 +694,6 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, ret
         mask_in = mask_in.cuda()
         mask_out = mask_out.cuda()
         mask_loop = mask_loop.cuda()
-        
-    pos_instance += batch_size
         
     return pos_instance, input_var, input_lengths, target_var, target_lengths,\
             adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
