@@ -330,6 +330,7 @@ def load_senses(path):
             words = line.split()
             for ix, word in enumerate(words):
                 if ix > 1:
+                    word = re.sub(r'%|:', '', word)
                     senses.append(word)
                     
             senses_all.append(senses)
