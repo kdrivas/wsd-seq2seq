@@ -441,27 +441,27 @@ def get_all_id(pairs):
     return id_pairs
 
 def pad_seq(lang, seq, max_length):
-    seq += [lang.vocab.stoi["<pad>"] for i in range(max_length - len(seq))]
+    seq += [PAD_token for i in range(max_length - len(seq))]
     return seq
 
 def indexes_from_sentence(lang, sentence):
-    return [lang.vocab.stoi[word] for word in sentence] + [lang.vocab.stoi["<eos>"]]
+    return [lang.vocab.stoi[word] for word in sentence.split(' ')] + [EOS_token]
 
-def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
+def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, nlp=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
-    arr_aux = []
+    arr_dep = []
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
         id_random = random.choice(id_arr)
         pair = pairs[id_random]
         
-        if arr_dep and return_dep_tree:
-            arr_aux.append(arr_dep[id_random])
+        if nlp and return_dep_tree:
+            arr_dep.append(nlp.dependency_parse(pair[0]))
         elif return_dep_tree:
-            arr_aux.append(pair[2])
+            arr_dep.append(pair[2])
         
         id_pairs.append(id_random)
         input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
@@ -477,10 +477,6 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
 
     input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
     target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
-    
-    if USE_CUDA:
-        input_var = input_var.cuda()
-        target_var = target_var.cuda()
 
 #
 #     nlp = StanfordCoreNLP(r'/home/krivas/projects/wsd-v2/stanford-corenlp-full-2018-01-31/')
@@ -595,9 +591,6 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, ret
     input_padded = [pad_seq(input_lang, s, max(input_lengths)) for s in input_seqs]
     target_lengths = [len(s) for s in target_seqs]
     target_padded = [pad_seq(output_lang, s, max(target_lengths)) for s in target_seqs]
-    
-    input_padded = [indexes_from_sentence(input_lang, seq) for seq in input_lang.pad(input_seqs)]
-    target_padded = [indexes_from_sentence(output_lang, seq) for seq in output_lang.pad(target_seqs)]
     
     input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
     target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
