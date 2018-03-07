@@ -74,7 +74,7 @@ class Evaluator():
                         new_beam.decoded_words.append('<eos>')
                         top_beams.append(new_beam)
                     else:
-                        new_beam.decoded_words.append(self.output_lang.itos[ni])  
+                        new_beam.decoded_words.append(self.output_lang.vocab.itos[ni])  
                     
                         decoder_input = Variable(torch.LongTensor([[ni]]))
                         if self.USE_CUDA: decoder_input = decoder_input.cuda()
@@ -116,6 +116,7 @@ class Evaluator():
     def evaluate_acc(self, id_pairs, pairs, answer_senses, k_beams=3, verbose=False):
         
         hint = 0
+        total = 0
         for ix in id_pairs:
             output_words, decoder_attn, beams = self.evaluate(pairs[ix][0], k_beams)
             output_sentence = ' '.join(output_words)
@@ -131,14 +132,18 @@ class Evaluator():
                 print(answer_senses[ix_answer])
                 print()
                 
+            total += answer_sense[ix_answer][1]
+            cont = 0
             for token in tokens:    
-                for sense in answer_senses[ix_answer]:
+                for (sense, times) in answer_senses[ix_answer]:
                     sense = re.sub('[!:%#$]', '', sense)
                     if(sense in token):
                         hint += 1
-                        break
+                        cont += 1
+                        if cont == times:
+                            break
                     
-        return hint * 1.0 / len(id_pairs)   
+        return hint * 1.0 / total     
 
     def evaluate_randomly(self, pairs, k_beams=3):
         pair = random.choice(pairs)
