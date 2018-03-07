@@ -388,23 +388,33 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
 
 ###################### GET LANGUAGE MODEL DATA ############################
 
-def process_instance_LM(text, verbose = False):
-    pairs = []
-        
+def process_instance_LM(text, test, verbose = False):
+    
+    sense_ids = re.findall(r'senseid=\"(.*?)\"', text, re.DOTALL)
     context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
     word_ambiguos = re.findall(r'<head>(.*?)</head>', context[0], re.DOTALL)
-    context = re.sub(r'<head>(.*?)</head>', word_ambiguos[0], context[0])
     
-    c = re.split(r'[\.]', context)
+    aux = re.split(r'[\.]', context)
+    
+    sentences = []
+    for sentence in aux:
+        if test:
+            if "<head>" in sentence:
+                for sense in sense_ids:
+                    sentences.append(re.sub(r'<head>(.*?)</head>', word_ambiguos[0] + "_" + sense, sentence))
+            else:
+                sentences.append(sentence)
+        else:
+            sentences.append(re.sub(r'<head>(.*?)</head>', word_ambiguos[0], sentence))
         
     if verbose:
         print("------ sentences")
-        print(c)
+        print(sentences)
         print()
 
-    return c
+    return sentences
 
-def construct_LM_data(path_source, verbose=True):
+def construct_LM_data(path_source, test=False, verbose=True):
         
     with open(path_source, 'r') as f:
         xml = f.read() 
