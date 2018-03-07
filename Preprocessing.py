@@ -261,8 +261,6 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
         
     context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
     word_ambiguos = re.findall(r'<head>(.*?)</head>', context[0], re.DOTALL)
-    aux = re.sub(r'\[(.*?)\]', '', context)
-    aux = re.sub(r'&(.*?);', '', aux)
     
     c = re.split(r'[\.|:|?|!]', context[0])
     
@@ -332,7 +330,6 @@ def load_senses(path):
             words = line.split()
             for ix, word in enumerate(words):
                 if ix > 1:
-                    word = re.sub(r'%|:', '', word)
                     senses.append(word)
                     
             senses_all.append(senses)
@@ -379,8 +376,6 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         data = re.sub(r'I \'m', 'i am', data)
         
         data = re.sub(r' \'d', 'd', data)
-        data = re.sub(r'\[(.*?)\]', '', data)
-        data = re.sub(r'&(.*?);', '', data)
         data = re.sub(r'&', '', data)
         
         if(is_train):
@@ -482,6 +477,10 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
 
     input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
     target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
+    
+    if USE_CUDA:
+        input_var = input_var.cuda()
+        target_var = target_var.cuda()
 
 #
 #     nlp = StanfordCoreNLP(r'/home/krivas/projects/wsd-v2/stanford-corenlp-full-2018-01-31/')
