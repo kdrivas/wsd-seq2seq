@@ -71,7 +71,7 @@ class Evaluator():
                     new_beam.sequence_log_probs.append(vi)
 
                     if ni == EOS_token: 
-                        new_beam.decoded_words.append('<EOS>')
+                        new_beam.decoded_words.append('<eos>')
                         top_beams.append(new_beam)
                     else:
                         new_beam.decoded_words.append(self.output_lang.itos[ni])  
@@ -160,7 +160,7 @@ class Evaluator():
         fig.colorbar(cax)
 
         # Set up axes
-        ax.set_xticklabels([''] + input_sentence.split(' ') + ['<EOS>'], rotation=90)
+        ax.set_xticklabels([''] + input_sentence.split(' ') + ['<eos>'], rotation=90)
         ax.set_yticklabels([''] + output_words)
 
         # Show label at every tick
