@@ -394,7 +394,7 @@ def process_instance_LM(text, test, verbose = False):
     context = re.findall(r'<context>(.*?)</context>', text, re.DOTALL)
     word_ambiguos = re.findall(r'<head>(.*?)</head>', context[0], re.DOTALL)
     
-    aux = re.split(r'[\.]', context)
+    aux = re.split(r'[\.]', context[0])
     
     sentences = []
     for sentence in aux:
@@ -436,7 +436,7 @@ def construct_LM_data(path_source, test=False, verbose=True):
         data = re.sub(r' \'d', 'd', data)
         data = re.sub(r'wou \'d', 'uld', data)
         
-        pairs.extend(process_instance_LM(data, verbose))
+        pairs.extend(process_instance_LM(data, test, verbose))
             
     return np.array(pairs)
 
