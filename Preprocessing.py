@@ -320,10 +320,21 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
         
     return pairs
 
-def load_senses(path):
+def load_senses(path_answer, path_test_data):
     
     senses_all = []
-    with open(path, 'r') as f:
+    targets_all = []
+
+    with open(path_test_data, 'r') as f:
+        xml = f.read()   
+    
+    instances = re.findall(r'<instance(.*?)</instance>', xml, re.DOTALL)
+    for instance in instances:
+        data = '<instance' + instance + '</instance>'
+        targets = re.findall(r'<head>(.*?)</head>', data, re.DOTALL)
+        targets_all.append(targets)
+        
+    with open(path_answer, 'r') as f:
         lines = f.read().split('\n')
         for line in lines:
             senses = []
@@ -335,7 +346,7 @@ def load_senses(path):
                     
             senses_all.append(senses)
     
-    return senses_all
+    return senses_all, targets_all
 
 def construct_pairs(path_source, path_model, is_train = True, test_path = None, prune_sentence = False, verbose=True):
     
