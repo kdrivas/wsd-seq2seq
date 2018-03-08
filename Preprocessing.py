@@ -293,7 +293,7 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
             else:
                 sentences_prune = []
                 sentences_prune.append(sentence)
-                sentences_prune = remove_LRB_RRB(sentences_prune, '(', ')')
+                sentences_prune = remove_LRB_RRB(sentences_prune, '-LRB-', '-RRB-')
                 
             
             if(verbose):
@@ -389,6 +389,9 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         
         data = re.sub(r' \'d', 'd', data)
         data = re.sub(r'&', '', data)
+        
+        data = re.sub(r'\(', ' -LRB- ', data)
+        data = re.sub(r'\)', ' -RBR- ', data)
         
         if(is_train):
             pairs.extend(process_instance(ix_ins, data, ner, parser, word_dict, nlp, is_train, None, prune_sentence, verbose))
