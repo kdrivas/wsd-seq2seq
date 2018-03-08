@@ -293,7 +293,7 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
             else:
                 sentences_prune = []
                 sentences_prune.append(sentence)
-                sentences_prune = remove_LRB_RRB(sentences_prune, '-LRB-', '-RRB-')
+                sentences_prune = remove_LRB_RRB(sentences_prune, '(', ')')
                 
             
             if(verbose):
@@ -320,21 +320,10 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
         
     return pairs
 
-def load_senses(path_answer, path_test_data):
+def load_senses(path):
     
     senses_all = []
-    targets_all = []
-
-    with open(path_test_data, 'r') as f:
-        xml = f.read()   
-    
-    instances = re.findall(r'<instance(.*?)</instance>', xml, re.DOTALL)
-    for instance in instances:
-        data = '<instance' + instance + '</instance>'
-        targets = re.findall(r'<head>(.*?)</head>', data, re.DOTALL)
-        targets_all.append(targets)
-        
-    with open(path_answer, 'r') as f:
+    with open(path, 'r') as f:
         lines = f.read().split('\n')
         for line in lines:
             senses = []
@@ -346,7 +335,7 @@ def load_senses(path_answer, path_test_data):
                     
             senses_all.append(senses)
     
-    return senses_all, targets_all
+    return senses_all
 
 def construct_pairs(path_source, path_model, is_train = True, test_path = None, prune_sentence = False, verbose=True):
     
@@ -389,9 +378,6 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         
         data = re.sub(r' \'d', 'd', data)
         data = re.sub(r'&', '', data)
-        
-        data = re.sub(r'\(', ' -LRB- ', data)
-        data = re.sub(r'\)', ' -RBR- ', data)
         
         if(is_train):
             pairs.extend(process_instance(ix_ins, data, ner, parser, word_dict, nlp, is_train, None, prune_sentence, verbose))
@@ -484,7 +470,7 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
         pair = pairs[id_random]
         
         if arr_dep and return_dep_tree:
-            arr_aux.append(arr_dep[id_random])
+            arr_aux.append(arr_dep[id_pair])
         elif return_dep_tree:
             arr_aux.append(pair[2])
         
@@ -870,5 +856,6 @@ def construct_vectors(pairs, vector_name_in='fasttext.en.300d', vector_name_out=
                 ix_rare_sent = lang_in.vocab.stoi[rare_word]
                 ix_rare_sens = lang_out.vocab.stoi[word]
                 lang_out.vocab.vectors[ix_rare_sens] = lang_in.vocab.vectors[ix_rare_sent].clone()
+    print("finish construct vectors")
     
     return lang_in, lang_out
