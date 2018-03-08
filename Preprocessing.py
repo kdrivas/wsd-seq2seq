@@ -376,6 +376,9 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         data = re.sub(r'He \'s', 'he is', data)
         data = re.sub(r'I \'m', 'i am', data)
         
+        data = re.sub(r'\[(.*?)\]', '', data)
+        data = re.sub(r'&(.*?);', '', data)
+        
         data = re.sub(r' \'d', 'd', data)
         data = re.sub(r'&', '', data)
         
