@@ -293,7 +293,7 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
             else:
                 sentences_prune = []
                 sentences_prune.append(sentence)
-                sentences_prune = remove_LRB_RRB(sentences_prune, '(', ')')
+                sentences_prune = remove_LRB_RRB(sentences_prune, '-LRB-', '-RRB-')
                 
             
             if(verbose):
@@ -320,21 +320,33 @@ def process_instance(ix_ins, text, ner, parser, word_dict, nlp, is_train = True,
         
     return pairs
 
-def load_senses(path):
+def load_senses(path_answer, path_test_data):
     
     senses_all = []
-    with open(path, 'r') as f:
+    targets_all = []
+
+    with open(path_test_data, 'r') as f:
+        xml = f.read()   
+    
+    instances = re.findall(r'<instance(.*?)</instance>', xml, re.DOTALL)
+    for instance in instances:
+        data = '<instance' + instance + '</instance>'
+        targets = re.findall(r'<head>(.*?)</head>', data, re.DOTALL)
+        targets_all.append(targets)
+        
+    with open(path_answer, 'r') as f:
         lines = f.read().split('\n')
         for line in lines:
             senses = []
             words = line.split()
             for ix, word in enumerate(words):
                 if ix > 1:
+                    word = re.sub(r'%|:', '', word)
                     senses.append(word)
                     
             senses_all.append(senses)
     
-    return senses_all
+    return senses_all, targets_all
 
 def construct_pairs(path_source, path_model, is_train = True, test_path = None, prune_sentence = False, verbose=True):
     
@@ -377,6 +389,9 @@ def construct_pairs(path_source, path_model, is_train = True, test_path = None, 
         
         data = re.sub(r' \'d', 'd', data)
         data = re.sub(r'&', '', data)
+        
+        data = re.sub(r'\(', ' -LRB- ', data)
+        data = re.sub(r'\)', ' -RBR- ', data)
         
         if(is_train):
             pairs.extend(process_instance(ix_ins, data, ner, parser, word_dict, nlp, is_train, None, prune_sentence, verbose))
@@ -457,21 +472,21 @@ def pad_seq(lang, seq, max_length):
 def indexes_from_sentence(lang, sentence):
     return [lang.vocab.stoi[word] for word in sentence.split(' ')] + [EOS_token]
 
-def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, nlp=None, USE_CUDA=False):
+def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
-    arr_dep = []
+    arr_aux = []
     
     id_arr = list(range(len(pairs)))
     for i in range(batch_size):
         id_random = random.choice(id_arr)
         pair = pairs[id_random]
         
-        if nlp and return_dep_tree:
-            arr_dep.append(nlp.dependency_parse(pair[0]))
+        if arr_dep and return_dep_tree:
+            arr_aux.append(arr_dep[id_random])
         elif return_dep_tree:
-            arr_dep.append(pair[2])
+            arr_aux.append(pair[2])
         
         id_pairs.append(id_random)
         input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
