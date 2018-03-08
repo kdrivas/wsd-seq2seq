@@ -460,7 +460,7 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
         pair = pairs[id_random]
         
         if arr_dep and return_dep_tree:
-            arr_aux.append(arr_dep[id_pair])
+            arr_aux.append(arr_dep[id_random])
         elif return_dep_tree:
             arr_aux.append(pair[2])
         
