@@ -9,6 +9,7 @@ import matplotlib.ticker as ticker
 from Preprocessing import variable_from_sentence
 from Preprocessing import SOS_token
 from Preprocessing import EOS_token
+from Preprocessing import generate_batch
 
 ############## EVALUATE MODEL ##########################
 
@@ -23,21 +24,28 @@ class Beam():
         self.decoder_cell = decoder_cell
 
 class Evaluator():
-    def __init__(self, encoder, decoder, input_lang, output_lang, max_length, USE_CUDA=False):
+    def __init__(self, encoder, decoder, input_lang, output_lang, max_length, gcn=None, USE_CUDA=False):
         self.encoder = encoder
         self.decoder = decoder
+        self.gcn = gcn
         self.input_lang = input_lang
         self.output_lang = output_lang
         self.max_length = max_length
         self.USE_CUDA = USE_CUDA
 
-    def evaluate(self, sentence, k_beams):
-        input_variable = variable_from_sentence(self.input_lang, sentence, self.USE_CUDA)
+    def evaluate(self, input_variable, k_beams, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None):
         input_length = input_variable.shape[0]
         
         encoder_hidden = self.encoder.init_hidden(1)
         encoder_cell = self.encoder.init_cell(1)
         encoder_outputs, encoder_hidden, encoder_cell = self.encoder(input_variable, encoder_hidden, encoder_cell)
+        
+        if self.gcn:
+            encoder_outputs = self.gcn(encoder_outputs,
+                             adj_arc_in, adj_arc_out,
+                             adj_lab_in, adj_lab_out,
+                             mask_in, mask_out,  
+                             mask_loop)
         
         decoder_input = Variable(torch.LongTensor([[SOS_token]]))
         decoder_context = Variable(torch.zeros(1, self.decoder.hidden_size))
@@ -60,7 +68,7 @@ class Evaluator():
             for beam in beams:
                 decoder_output, decoder_hidden, decoder_cell, decoder_attention = self.decoder(
                     beam.decoder_input, beam.decoder_hidden, beam.decoder_cell, encoder_outputs)     
-
+        
                 # Beam search, take the top k with highest probability
                 topv, topi = decoder_output.data.topk(k_beams)
 
@@ -113,25 +121,34 @@ class Evaluator():
         print('<', output_sentence)
         print('')
         
-    def evaluate_acc(self, id_pairs, pairs, senses_all, targets_all, k_beams=3, verbose=False):
+    def evaluate_acc(self, id_pairs, pairs, senses_all, targets_all, k_beams=3, arr_dep_test=None, verbose=False):
         
         hint = 0
         total = 0
-        for ix in id_pairs:
-            output_words, decoder_attn, beams = self.evaluate(pairs[ix][0], k_beams)
+        aux = []
+        
+        i = 0
+        for ix, id_pair in enumerate(id_pairs):
+            if pairs[ix][0] in aux:
+                print("repetido")
+                continue
+            i += 1
+            aux.append(pairs[ix][0])
+            
+            if self.gcn:
+                _, input_var, _, _, _, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop, _\
+                = generate_batch(self.input_lang, self.output_lang, 1, pairs, ix, True, arr_dep_test, self.USE_CUDA)
+                output_words, decoder_attn, beams = self.evaluate(input_var, k_beams, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop)
+            else:
+                _, input_var, _, _, _, _, _, _, _, _, _, _, _\
+                = generate_batch(self.input_lang, self.output_lang, 1, pairs, ix, False, None, self.USE_CUDA)
+                output_words, decoder_attn, beams = self.evaluate(input_var, k_beams)
+            
             output_sentence = ' '.join(output_words)
             
             torch.cuda.empty_cache()
             tokens = output_sentence.split()
             ix_answer = int(pairs[ix][3])
-
-            if(verbose):
-                print("----- tokens procesados")
-                print(tokens)
-                print("----- respuesta")
-                print(answer_senses[ix_answer])
-                print()
-                
             total += targets_all[ix_answer]
             cont = 0
             for token in tokens:    
@@ -142,7 +159,26 @@ class Evaluator():
                         cont += 1
                         if cont == targets_all[ix_answer]:
                             break
-                    
+                            
+            if(verbose):
+                print("----- ID")
+                print(ix)
+                print("----- tokens input")
+                print(pairs[ix][0])
+                print("----- output real")
+                print(pairs[ix][1])
+                print("----- output predecido")
+                print(output_sentence)
+                print("----- respuesta")
+                print(senses_all[ix_answer])
+                print("----- acierto")
+                print(cont)
+                print()
+        
+            print("--- hints:  {}   --- total instances: {}".format(hint, total))
+                
+        print("%d Instances processed", i)
+        
         return hint * 1.0 / total     
 
     def evaluate_randomly(self, pairs, k_beams=3):
