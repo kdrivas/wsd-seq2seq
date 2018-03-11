@@ -230,34 +230,43 @@ class SintacticGCN(nn.Module):
             encoder_outputs = encoder_outputs.permute(1, 0, 2).contiguous()
         
         batch_size, seq_len, _ = encoder_outputs.shape
-        max_degree = 1
         input_ = encoder_outputs.view((batch_size * seq_len , self.num_inputs))  # [b* t, h]        
         
+        max_degree = 1
         if self.in_arcs:
             input_in = torch.mm(input_, self.V_in)  # [b* t, h] * [h,h] = [b*t, h]
-            second_in = self.b_in.index_select(0, label_tensor_in)  # [b* t* 1, h]
-            in_ = (input_in + second_in).view((batch_size, seq_len, 1, self.num_units))
+            first_in = input_in.index_select(0, arc_tensor_in[0] * seq_len + arc_tensor_in[1])
+            
+            second_in = self.b_in.index_select(0, label_tensor_in.squeeze(0))  # [b* t* 1, h]
+            in_ = (first_in + second_in).view((batch_size, seq_len, 1, self.num_units))
 
             # compute gate weights
             input_in_gate = torch.mm(input_, self.V_in_gate)  # [b* t, h] * [h,h] = [b*t, h]
-            second_in_gate = self.b_in_gate.index_select(0, label_tensor_in)
+            first_in_gate = input_in_gate.index_select(0, arc_tensor_in[0] * seq_len + arc_tensor_in[1])
+            
+            second_in_gate = self.b_in_gate.index_select(0, label_tensor_in.squeeze(0))
             in_gate = (input_in_gate + second_in_gate).view((batch_size, seq_len, 1))
 
             max_degree += 1
             
         if self.out_arcs:           
-            input_out = torch.mm(input_, self.V_out)  # [b* t, h] * [h,h] = [b* t, h]
-            second_out = self.b_out.index_select(0, label_tensor_out)     
+            input_out = torch.mm(input_, self.V_out)  # [b* t, h] * [h,h] = [b* t, h]        
+            first_out = input_out.index_select(0, arc_tensor_out[0] * seq_len + arc_tensor_out[1])
+        
+            second_out = self.b_out.index_select(0, label_tensor_out.squeeze(0))     
             
-            degr = int(input_out.shape[0] / batch_size / seq_len)
+            degr = int(first_out.shape[0] / batch_size / seq_len)
             max_degree += degr
 
-            out_ = (input_out + second_out).view((batch_size, seq_len, degr, self.num_units))
+            out_ = (first_out + second_out).view((batch_size, seq_len, degr, self.num_units))
 
             # compute gate weights
             input_out_gate = torch.mm(input_, self.V_out_gate)  # [b* t, h] * [h,h] = [b* t, h]
-            second_out_gate = self.b_out_gate.index_select(0, label_tensor_out)
-            out_gate = (input_out_gate + second_out_gate).view((batch_size, seq_len, degr))
+            first_out_gate = input_out_gate.index_select(0, arc_tensor_out[0] * seq_len + arc_tensor_out[1])
+            
+            second_out_gate = self.b_out_gate.index_select(0, label_tensor_out.squeeze(0))
+            
+            out_gate = (first_out_gate + second_out_gate).view((batch_size, seq_len, degr))
        
         same_input = torch.mm(encoder_outputs.view(-1,encoder_outputs.size(2)), self.W_self_loop).\
                         view(encoder_outputs.size(0), encoder_outputs.size(1), -1)
@@ -309,6 +318,7 @@ class SintacticGCN(nn.Module):
             result_ = result_.view((batch_size, seq_len, self.num_units))
 
         return result_    
+
 
 ########################## DATA PARALLEL ###########################
     
