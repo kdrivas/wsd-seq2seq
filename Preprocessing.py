@@ -329,7 +329,7 @@ def load_senses(path_senses, path_test):
     instances = re.findall(r'<instance(.*?)</instance>', xml, re.DOTALL)
     for ix_ins, instance in enumerate(instances):
         data = '<instance' + instance + '</instance>'
-        senses_ids = re.findall(r'senseid=\"(.*?)\"', data, re.DOTALL)
+        senses_ids = re.findall(r'<head>(.*?)</head>', data, re.DOTALL)
         targets_all.append(len(senses_ids))
     
     senses_all = []
