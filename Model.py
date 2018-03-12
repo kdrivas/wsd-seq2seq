@@ -1,4 +1,4 @@
-import random
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -169,7 +169,7 @@ class Attn_decoder_rnn(nn.Module):
 class SintacticGCN(nn.Module):
     def __init__(self, num_inputs, num_units,
                  num_labels,
-                 dropout = 0.,
+                 dropout = 0.2,
                  in_arcs = True,
                  out_arcs = True,
                  batch_first = False,
@@ -187,6 +187,7 @@ class SintacticGCN(nn.Module):
         
         self.relu = nn.LeakyReLU()
         self.sigmoid = nn.Sigmoid()
+        self.dropout_rate = dropout
         
         if in_arcs:
             self.V_in = Parameter(torch.FloatTensor(self.num_inputs, self.num_units))
@@ -311,12 +312,14 @@ class SintacticGCN(nn.Module):
         potentials_masked_ = self.relu(potentials_masked_)
 
         result_ = potentials_masked_.permute(1, 0).contiguous()   # [b * t, h]
+        result_ = F.dropout(result_, p=self.dropout_rate, training=self.training)
         
         if not self.batch_first:
             result_ = result_.view((seq_len, batch_size, self.num_units))  # [ b, t, h]
         else:
             result_ = result_.view((batch_size, seq_len, self.num_units))
 
+        
         return result_    
 
 
