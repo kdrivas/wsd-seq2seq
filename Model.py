@@ -185,7 +185,7 @@ class SintacticGCN(nn.Module):
         self.num_labels = num_labels
         self.batch_first = batch_first
         
-        self.relu = nn.ReLU()
+        self.relu = nn.LeakyReLU()
         self.sigmoid = nn.Sigmoid()
         
         if in_arcs:
@@ -416,7 +416,7 @@ def train_parallel(input_lang, output_lang, input_batches, input_lengths, target
  
 ########################## TRAINING ###########################
 
-def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train=True, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None, USE_CUDA=False):
+def pass_batch(input_lang, output_lang, encoder, decoder, gcn1, gcn2, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train=True, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None, USE_CUDA=False):
         
     cell = encoder.init_cell(batch_size)
     hidden = encoder.init_hidden(batch_size)
@@ -424,8 +424,14 @@ def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input
     encoder_outputs, encoder_hidden, encoder_cell = encoder(input_batches, hidden, cell)
     decoder_input = Variable(torch.LongTensor([input_lang.vocab.stoi["<sos>"]] * batch_size))
     
-    if gcn:
-        encoder_outputs = gcn(encoder_outputs,
+    if gcn1:
+        encoder_outputs = gcn1(encoder_outputs,
+                             adj_arc_in, adj_arc_out,
+                             adj_lab_in, adj_lab_out,
+                             mask_in, mask_out,  
+                             mask_loop)
+    if gcn2:     
+        encoder_outputs = gcn2(encoder_outputs,
                              adj_arc_in, adj_arc_out,
                              adj_lab_in, adj_lab_out,
                              mask_in, mask_out,  
@@ -465,16 +471,19 @@ def pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input
         
     return all_decoder_outputs, target_batches
 
-def train(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, encoder, decoder, gcn, encoder_optimizer, decoder_optimizer, gcn_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None, USE_CUDA=False):
+def train(input_lang, output_lang, input_batches, input_lengths, target_batches, target_lengths, batch_size, encoder, decoder, gcn1, gcn2, encoder_optimizer, decoder_optimizer, gcn1_optimizer, gcn2_optimizer, criterion, tf_ratio, max_length, clip=None, train=True, adj_arc_in=None, adj_arc_out=None, adj_lab_in=None, adj_lab_out=None, mask_in=None, mask_out=None, mask_loop=None, USE_CUDA=False):
     
     # Zero gradients of both optimizers
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
-    if gcn:
-        gcn_optimizer.zero_grad()
+    if gcn1:
+        gcn1_optimizer.zero_grad()
+        
+    if gcn2:
+        gcn2_optimizer.zero_grad()
     loss = 0 # Added onto for each word
 
-    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, gcn, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop, USE_CUDA)
+    all_decoder_outputs, target_batches = pass_batch(input_lang, output_lang, encoder, decoder, gcn1, gcn2, batch_size, input_batches, input_lengths, target_batches, target_lengths, tf_ratio, train, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop, USE_CUDA)
     
     # Loss calculation and backpropagation
     log_probs = F.log_softmax(all_decoder_outputs.view(-1, decoder.output_size), dim=1)
@@ -486,9 +495,14 @@ def train(input_lang, output_lang, input_batches, input_lengths, target_batches,
         torch.nn.utils.clip_grad_norm(decoder.parameters(), clip)
         encoder_optimizer.step()
         decoder_optimizer.step()
-        if gcn:
-            torch.nn.utils.clip_grad_norm(gcn.parameters(), clip)
-            gcn_optimizer.step()
+        
+        if gcn1:
+            torch.nn.utils.clip_grad_norm(gcn1.parameters(), clip)
+            gcn_optimizer1.step()
+            
+        if gcn2:
+            torch.nn.utils.clip_grad_norm(gcn2.parameters(), clip)
+            gcn_optimizer2.step()
     
     del all_decoder_outputs
     del target_batches
