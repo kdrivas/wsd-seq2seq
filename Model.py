@@ -447,7 +447,7 @@ def pass_batch(input_lang, output_lang, encoder, decoder, gcn1, gcn2, batch_size
         decoder_input = decoder_input.cuda()
         #decoder_context = decoder_context.cuda()
         
-    use_tf = random.random() < tf_ratio
+    use_tf = np.random.random() < tf_ratio
     for t in range(target_batches.data.size()[0]):
         decoder_output, decoder_hidden, decoder_cell, decoder_attn = decoder(
             decoder_input, decoder_hidden, decoder_cell, encoder_outputs
@@ -498,11 +498,11 @@ def train(input_lang, output_lang, input_batches, input_lengths, target_batches,
         
         if gcn1:
             torch.nn.utils.clip_grad_norm(gcn1.parameters(), clip)
-            gcn_optimizer1.step()
+            gcn1_optimizer.step()
             
         if gcn2:
             torch.nn.utils.clip_grad_norm(gcn2.parameters(), clip)
-            gcn_optimizer2.step()
+            gcn2_optimizer.step()
     
     del all_decoder_outputs
     del target_batches
