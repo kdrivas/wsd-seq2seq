@@ -456,6 +456,16 @@ def construct_LM_data(path_source, test=False, verbose=True):
 
 ###################### BATCHES ############################
 
+def find_type(type_dep):
+    if type_dep=='NSUBJ' or type_dep=='OBJ' or type_dep=='IOBJ' or type_dep=='CSUBJ' or type_dep=='CCOMP' or type_dep == 'XCOMP':
+        return 0
+    elif type_dep=='OBL' or type_dep=='VOCATIVE' or type_dep=='DISLOCATED' or type_dep=='ADVCL' or type_dep=='ADVMOD' or type_dep=='DISCOURSE' or type_dep=='AUX' or type_dep=='COP' or type_dep=='MARK':
+        return 1
+    elif type_dep=='NMOD' or type_dep=='APPOS' or type_dep=='NUMMOD' or type_dep=='ACL' or type_dep=='AMOD' or type_dep=='DET' or type_dep=='CLF' or type_dep=='CASE':
+        return 2
+    else:
+        return 3
+
 def get_adj(deps, batch_size, seq_len, max_degree):
 
     adj_arc_in = np.zeros((batch_size * seq_len, 2), dtype='int32')
@@ -492,13 +502,13 @@ def get_adj(deps, batch_size, seq_len, max_degree):
                 idx_out = (d * seq_len * max_degree) + arc_2 * max_degree + tmp_out[arc_2]
 
                 adj_arc_in[idx_in] = np.array([d, arc_2])  # incoming arcs
-                adj_lab_in[idx_in] = np.array([_DEP_LABELS_DICT[arc[0].upper()]])  # incoming arcs
+                adj_lab_in[idx_in] = np.array([find_type([arc[0].upper()])])  # incoming arcs
 
                 mask_in[idx_in] = 1.
 
                 if tmp_out[arc_2] < max_degree:
                     adj_arc_out[idx_out] = np.array([d, arc_1])  # outgoing arcs
-                    adj_lab_out[idx_out] = np.array([_DEP_LABELS_DICT[arc[0].upper()]])  # outgoing arcs
+                    adj_lab_out[idx_out] = np.array([find_type([arc[0].upper()])])  # outgoing arcs
                     mask_out[idx_out] = 1.
 
         tmp_in = {}
@@ -531,7 +541,7 @@ def pad_seq(lang, seq, max_length):
 def indexes_from_sentence(lang, sentence):
     return [lang.vocab.stoi[word] for word in sentence.split(' ')] + [EOS_token]
 
-def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
+def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, max_degree=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
@@ -566,7 +576,7 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
     
     if return_dep_tree:
         # max len is setting mannually
-        adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop = get_adj(arr_aux, batch_size, max(input_lengths), 10)
+        adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop = get_adj(arr_aux, batch_size, max(input_lengths), max_degree)
     
     if USE_CUDA:
         adj_arc_in = adj_arc_in.cuda()
@@ -582,7 +592,7 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
             adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
 id_pairs
 
-def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, return_dep_tree=False, arr_dep=None, USE_CUDA=False):
+def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, return_dep_tree=False, arr_dep=None, max_degree=None, USE_CUDA=False):
     input_seqs = []
     target_seqs = []
     id_pairs = []
@@ -623,7 +633,7 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, ret
     # Enable dependency label batch   
     if return_dep_tree:
         # max len is setting mannually
-        adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop = get_adj(arr_aux, batch_size, max(input_lengths), 10)  
+        adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop = get_adj(arr_aux, batch_size, max(input_lengths), max_degree)  
     
     if USE_CUDA:
         adj_arc_in = adj_arc_in.cuda()
