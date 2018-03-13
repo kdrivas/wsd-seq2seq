@@ -121,7 +121,7 @@ class Evaluator():
         print('<', output_sentence)
         print('')
         
-    def evaluate_acc(self, id_pairs, pairs, senses_all, targets_all, k_beams=3, arr_dep_test=None, verbose=False):
+    def evaluate_acc(self, id_pairs, pairs, senses_all, targets_all, k_beams=3, arr_dep_test=None, max_degree=None, verbose=False):
         
         hint = 0
         total = 0
@@ -138,12 +138,14 @@ class Evaluator():
             
             if self.gcn:
                 _, input_var, _, _, _, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop, _\
-                = generate_batch(self.input_lang, self.output_lang, 1, pairs, ix, True, arr_dep_test, self.USE_CUDA)
+                = generate_batch(self.input_lang, self.output_lang, 1, pairs, ix, True, arr_dep_test, max_degree, self.USE_CUDA)
                 output_words, decoder_attn, beams = self.evaluate(input_var, k_beams, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop)
             else:
                 _, input_var, _, _, _, _, _, _, _, _, _, _, _\
-                = generate_batch(self.input_lang, self.output_lang, 1, pairs, ix, False, None, self.USE_CUDA)
+                = generate_batch(self.input_lang, self.output_lang, 1, pairs, ix, False, None, None, self.USE_CUDA)
+                print(input_var)
                 output_words, decoder_attn, beams = self.evaluate(input_var, k_beams)
+                
             
             output_sentence = ' '.join(output_words)
             
