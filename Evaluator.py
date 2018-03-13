@@ -143,7 +143,6 @@ class Evaluator():
             else:
                 _, input_var, _, _, _, _, _, _, _, _, _, _, _\
                 = generate_batch(self.input_lang, self.output_lang, 1, pairs, ix, False, None, None, self.USE_CUDA)
-                print(input_var)
                 output_words, decoder_attn, beams = self.evaluate(input_var, k_beams)
                 
             
