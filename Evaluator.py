@@ -126,14 +126,15 @@ class Evaluator():
         hint = 0
         total = 0
         aux = []
-        
+        d = []
         i = 0
         for ix, id_pair in enumerate(id_pairs):
-            if pairs[ix][0] in aux:
+            if pairs[ix][0] + pairs[ix][3] in aux:
                 print("repetido")
                 continue
             i += 1
-            aux.append(pairs[ix][0])
+            d.append(pairs[ix][3])
+            aux.append(pairs[ix][0] + pairs[ix][3])
             
             if self.gcn:
                 _, input_var, _, _, _, adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop, _\
@@ -179,7 +180,7 @@ class Evaluator():
                 
         print("%d Instances processed", i)
         
-        return hint * 1.0 / total     
+        return hint * 1.0 / total, d  
 
     def evaluate_randomly(self, pairs, k_beams=3):
         pair = random.choice(pairs)
@@ -227,5 +228,4 @@ class Evaluator():
         candidates = [' '.join(candidate[:-1]) for candidate in candidates]
         references = [pair[1] for pair in pairs]
         return candidates, references
-
 
