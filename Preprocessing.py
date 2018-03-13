@@ -573,20 +573,29 @@ def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=Fal
     if USE_CUDA:
         input_var = input_var.cuda()
         target_var = target_var.cuda()
+        
+    adj_arc_in = None
+    adj_arc_out = None
+    adj_lab_in = None
+    adj_lab_out = None
+
+    mask_in = None
+    mask_out = None
+    mask_loop = None
     
     if return_dep_tree:
         # max len is setting mannually
         adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop = get_adj(arr_aux, batch_size, max(input_lengths), max_degree)
     
-    if USE_CUDA:
-        adj_arc_in = adj_arc_in.cuda()
-        adj_arc_out = adj_arc_out.cuda()
-        adj_lab_in = adj_lab_in.cuda()
-        adj_lab_out = adj_lab_out.cuda()
-        
-        mask_in = mask_in.cuda()
-        mask_out = mask_out.cuda()
-        mask_loop = mask_loop.cuda()
+        if USE_CUDA:
+            adj_arc_in = adj_arc_in.cuda()
+            adj_arc_out = adj_arc_out.cuda()
+            adj_lab_in = adj_lab_in.cuda()
+            adj_lab_out = adj_lab_out.cuda()
+
+            mask_in = mask_in.cuda()
+            mask_out = mask_out.cuda()
+            mask_loop = mask_loop.cuda()
         
     return input_var, input_lengths, target_var, target_lengths,\
             adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
@@ -631,19 +640,28 @@ def generate_batch(input_lang, output_lang, batch_size, pairs, pos_instance, ret
         target_var = target_var.cuda()
         
     # Enable dependency label batch   
+    adj_arc_in = None
+    adj_arc_out = None
+    adj_lab_in = None
+    adj_lab_out = None
+
+    mask_in = None
+    mask_out = None
+    mask_loop = None
+    
     if return_dep_tree:
         # max len is setting mannually
         adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop = get_adj(arr_aux, batch_size, max(input_lengths), max_degree)  
     
-    if USE_CUDA:
-        adj_arc_in = adj_arc_in.cuda()
-        adj_arc_out = adj_arc_out.cuda()
-        adj_lab_in = adj_lab_in.cuda()
-        adj_lab_out = adj_lab_out.cuda()
-        
-        mask_in = mask_in.cuda()
-        mask_out = mask_out.cuda()
-        mask_loop = mask_loop.cuda()
+        if USE_CUDA:
+            adj_arc_in = adj_arc_in.cuda()
+            adj_arc_out = adj_arc_out.cuda()
+            adj_lab_in = adj_lab_in.cuda()
+            adj_lab_out = adj_lab_out.cuda()
+
+            mask_in = mask_in.cuda()
+            mask_out = mask_out.cuda()
+            mask_loop = mask_loop.cuda()
         
     return pos_instance, input_var, input_lengths, target_var, target_lengths,\
             adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop,\
