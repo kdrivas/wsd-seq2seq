@@ -228,12 +228,12 @@ def data_to_index(pairs, input_vec, output_vec):
         
     return np.array(new_pairs)
 
-def read_trees(filename):
-    trees = [read_tree(line) for line in (np.load(filename))]
+def get_trees(filename):
+    trees = [get_tree(array) for array in (np.load(filename))]
     return np.array(trees)
 
-def read_tree(line):
-    parents = line
+def get_tree(array):
+    parents = array
     trees = dict()
     root = None
     for i in range(0, len(parents)):
@@ -258,6 +258,23 @@ def read_tree(line):
                 tree = trees[child]
             trees[parent].add_child(tree)
     return root
+
+def get_matrixes(filename):
+    trees = [get_matrix(array) for array in (np.load(filename))]
+    return np.array(trees)
+
+def get_matrix(array):
+    matrix = np.zeros((int(len(array) / 2) + 1, int(len(array) / 2) + 1))
+    for i in range(0, len(array), 2):
+        if array[i] != 0 or array[i+1] != 0:
+            val_iz = array[i] - 1
+            val_der =  array[i+1] - 1
+            matrix[val_iz][val_der] = 1
+            matrix[val_der][val_iz] = 1
+            matrix[val_der][val_der] = 1
+            matrix[val_iz][val_iz] = 1
+        
+    return matrix
 
 def construct_vector(pair, name_lang, construct_vector=True, vector_name='fasttext.en.300d', dir='corpus'):
     lang = pd.DataFrame(pair, columns=[name_lang])
@@ -285,8 +302,7 @@ def unicode_to_ascii(s):
 
 def normalize_string(pair):
     pair = unicode_to_ascii(pair.lower().strip())
-    pair = re.sub(r"([.,;!?'‘’])", r' \1', pair) # separate .!? from words
-    
+    #pair = re.sub(r"([.,;!?'‘’])", r' \1', pair) # separate .!? from words
     
     return ' '.join(pair.split())
 
@@ -330,7 +346,7 @@ def read_langs(lang1, lang2, reverse=False, dir='corpus'):
         
     return pairs
 
-def prepare_data(lang1_name, lang2_name, reverse=False, min_length=0, max_length=50, dir='corpus', return_trees=False):
+def prepare_data(lang1_name, lang2_name, reverse=False, min_length=0, max_length=50, dir='corpus', return_trees=False, output_tree='matrix'):
     pairs = read_langs(lang1_name, lang2_name, reverse=reverse, dir=dir)
     print("Read %d sentence pairs" % len(pairs))
     
@@ -345,12 +361,17 @@ def prepare_data(lang1_name, lang2_name, reverse=False, min_length=0, max_length
     vector_2 = construct_vector(pairs[:, 1], lang2_name, dir=dir)
     
     if return_trees:
-        print('Creating trees...')
-        input_trees = read_trees(os.path.join(dir, 'a.parents.npy'))[indexes]
-        output_trees = read_trees(os.path.join(dir, 'b.parents.npy'))[indexes]
+        if output_tree == 'tree':
+            print('Creating trees...')
+            input_syntax = get_trees(os.path.join(dir, 'a.parents.npy'))[indexes]
+            output_syntax = get_trees(os.path.join(dir, 'b.parents.npy'))[indexes]
+        elif output_tree == 'matrix':
+            print('Creating matrixes...')
+            input_syntax = get_matrixes(os.path.join(dir, 'a.parents.npy'))[indexes]
+            output_syntax = get_matrixes(os.path.join(dir, 'b.parents.npy'))[indexes]
 
     print('Indexed %d words in input language, %d words in output' % (len(vector_1.vocab.itos), len(vector_2.vocab.itos)))
     if return_trees:
-        return vector_1, vector_2, input_trees, output_trees, pairs
+        return vector_1, vector_2, input_syntax, output_syntax, pairs
     else:
         return vector_1, vector_2, pairs
