@@ -21,7 +21,7 @@ class Encoder(nn.Module):
         self.rnn = nn.GRU(emb_size, hidden_size, n_layers, dropout=self.dropout, bidirectional=True)
         self.init_weights()
             
-    def forward(self, input_seqs, hidden = None):
+    def forward(self, input_seqs, hidden=None):
         embedded = self.embedding(input_seqs)
 
         outputs, hidden = self.rnn(embedded, hidden)

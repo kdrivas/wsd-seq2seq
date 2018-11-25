@@ -1,0 +1,51 @@
+The English lexical sample task is the result a Coordinated Effort from Adam
+Kilgarriff and UPenn.
+
+Penn provided the training/testing data for the verbs in the lexical sample
+English task, and the testing data for the all-words task.  The lexical
+sample verbs were tagged by Lauren Delfs and Susanne Wolff, with Christiane
+Fellbaum as an arbitrator.  The all words data was tagged by Lauren Delfs
+and Kate Forbes, with Susanne Wolff and Christiane Fellbaum both as
+arbitrators.   Lauren and Kate are both Linguistics students, and Susanne
+is a consultant.  All of the taggers used a sense tagging interface
+implemented by Joseph Rosenzweig and maintained by Scott Cotton.  Well over
+1000 person hours went into the tagging tasks.
+
+The all words text comes from Penn Treebank II Wall Street Journal articles.
+(Copyright )  1996-2000 Linguistic Data Consortium, University of
+Pennsylvania.  All rights reserved.)  The lexical sample verb tagging data
+also came primarily from the Wall Street Journal data in Penn Treebank II.
+However, where that did not supply enough samples to approximate
+75+15*senses per verb, we supplemented with British National Corpus
+instances.  We did not find sentences for every sense of every word we
+tagged.  We also sometimes found sentences for which none of the available
+senses were appropriate, and they are tagged with NT for Not There.
+
+The nouns, adjectives and verbs for the lexical sample task were also
+grouped at Penn, with an attempt to be explicit about the criteria for each
+grouping.  These criteria
+included differences in semantic classes of arguments, differences in the
+number and type of arguments, whether or not something is created or there
+is a shared result, whether an action is abstract vs. concrete or actual
+vs. mental, whether there is a specialized subject domain, etc.  All of the
+verbs were grouped by two or more people with differences being reconciled.
+ The nouns and adjectives were grouped by Lauren Delfs, and since WordNet
+does not have groups for nouns and adjectives were done quite independently
+of WN.  The verb groupers included Scott Cotton, Lauren Delfs, Hoa Trang
+Dang, Christiane Fellbaum, Martha Palmer and Susanne Wolff.  In some cases
+the groupings of the verbs are identical to the original WordNet groupings,
+in some cases they are quite different.  Some verbs were extremely
+difficult to group, and no one was happy with the result.
+
+These groupings or the original WN groupings are available for use as
+coarse-grained senses for scoring purposes.
+
+The following files are contained in the Training data:
+
+README:					this file
+eng-lexical-sample.training.xml:	The lexical sample training data
+eng-lexical-sample.training.key:	separate table of answers
+lexical-sample.dtd:			The dtd -- with necesasry character entities
+sense-key2mnemonic:			Mnemonics for the n,adj,adv sensees.
+
+

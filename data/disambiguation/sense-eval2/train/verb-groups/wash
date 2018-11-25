@@ -1,0 +1,131 @@
+Wash
+
+GROUP ONE
+
+Sense 1
+wash, rinse -- (clean with some chemical process)
+
+Sense 2
+wash, lave -- (cleanse (one's body) with soap and water)
+
+Sense 3
+wash, launder -- (cleanse with a cleaning agent, such as soap, and water; "Wash
+the towels, please!")
+
+Sense 5
+wash -- (be capable of being washed; "Does this material wash?")
+
+Sense 12
+wash -- (to cleanse (itself or another animal) by licking, as of a cat; "The 
+cat washes several times a day")
+
+************************************************
+
+GROUP TWO
+
+Sense 4
+wash -- (move by or as if by water; "The swollen river washed away the 
+footbridge")
+
+Sense 10
+wash -- (form by erosion: "The river washed a ravine into the mountainside")
+
+************************************************
+
+GROUP THREE
+
+Sense 7
+wash -- (separate dirt or gravel from (precious minerals))
+
+Sense 9
+wash, wash out, wash off, wash away -- (remove by the application of water or 
+other liquid and soap or some other cleaning agent: "he washed the dirt from 
+his coat"; "The nurse washed away the blood"; "Can you wash away the spots on 
+the windows?" "he managed to wash out the stains")
+
+************************************************
+
+Sense 6
+wash -- (admit to testing or proof; "This silly excuse won't wash in traffic 
+court")
+
+************************************************
+
+Sense 8
+wash -- (apply a thin coating of paint, metal, etc., to)
+
+************************************************
+
+Sense 11
+moisten, wash, dampen -- (make moist; "The dew moistened the meadows")
+
+************************************************
+
+Sense 12
+wash -- (to cleanse (itself or another animal) by licking, as of a cat; "The 
+cat washes several times a day")
+
+************************************************
+
+NOTES:
+
+My analysis of "wash" is very similar to the one put forth in WordNet, but not 
+identical.  I did make a change to my original formulation after looking at the
+WordNet version -- I had originally included sense 2 in Group One and left 
+sense 12 by itself, and then decided upon viewing WordNet that this was the 
+better choice.  However, my version is less lumped than WordNet; I did not 
+match the two.  This is probably the death knell for this version, but so be 
+it: I support my analysis.
+
+GROUP ONE.  This group shares the sense of cleaning something, not a body part,
+with some sort of cleaning agent.  On my analysis, there should be three senses
+in this group: the general sense of launder (sense 1), the general sense of 
+washing something with soap and water (sense 3), and the middle construction 
+denoting whether the washed item is actually capable of being thus treated 
+(sense 5).  I recall having difficulty deciding between senses 1 and 3 when I 
+was tagging "wash."
+
+GROUP TWO.  The difference between this group and the first group is that in 
+this group, what one is washing is a body part, typically one's own; these uses
+can be intransitive.  There are two senses in this category, one involving 
+humans and soap (sense 2), and the other involving cats and tongues (sense 12).
+I had originally placed sense 2 in the first group and left sense 12 alone, 
+because of the manner in which the cleansing took place: cats and tongues do 
+not fit with humans and soap, but humans and soap can fit with humans, towels 
+and soap.  Upon seeing WordNet, I changed my mind, because the basic idea is 
+the same.  I could revert back to my former position, but would NOT support 
+placing sense 12 in with the launder senses.  That is why I prefer this version
+to my original: in this case you have the senses that express the idea of 
+reflexive washing together and the agentive washing together, whereas before it
+was the idea of soap versus the idea of tongues.
+
+GROUP THREE.  This group is about the movement of something by water, or by 
+something that can be metaphorically extended from the idea of movement by 
+water.  This encompasses two senses, one for general transportation by water 
+(sense 4) and the other for erosion (sense 10).
+
+NEAR-FITS.  In WordNet, the group corresponding to my Group One is larger by 
+two senses: the separation of gravel and dirt from gems (sense 7) and the 
+removal of something by water (sense 9).  I have chosen to leave these two 
+senses out of a group.
+
+I think that sense 7 is too domain-specific to fit with the others.  Also, I 
+do not have an example sentence for sense 7 and therefore am uncertain what its
+syntax would be.  Finally, sense 7 does not involve soap, and the canonical 
+motion associated with it is probably not the same as the others in that group.
+So sense 7 should be excluded from the first group.
+
+Sense 9 should be excluded from the first group also.  It is not expressing the
+same concept as the other three senses: here we are removing something with 
+water, rather than making something clean by using water and some other 
+cleaning agent.  Sense 9 takes a direct object of dirt, not of the dirty.  The 
+action is similar, yes, but the concept itself is actually closer to sense 4 
+than to sense 1 or 3 in my mind.
+
+I would not group senses 7 and 9 with each other because they are too different
+and possibly do not have the same syntax.
+
+OTHERS.  Three other senses were also left isolated.  The first is the idea of 
+standing up to testing or proof (sense 6), the second applying a thin coating 
+of some kind (sense 8), and the third to making something damp (sense 11).  
+These all seem very distinct.

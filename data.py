@@ -121,7 +121,7 @@ def generate_batches(input_lang, output_lang, batch_size, pairs, arr_dep=[], USE
         target_seqs = []
         trees = []
         for i in range(bz):
-            ix_pair = random.choice(np.arange(0, len(pairs)))
+            ix_pair = pos + i
             input_seqs.append(indexes_from_sentence(input_lang, pairs[ix_pair][0]))
             target_seqs.append(indexes_from_sentence(output_lang, pairs[ix_pair][1]))
             if len(arr_dep):
@@ -153,64 +153,6 @@ def generate_batches(input_lang, output_lang, batch_size, pairs, arr_dep=[], USE
     else:
         return input_batches, target_batches
 
-def random_batch(input_lang, output_lang, batch_size, pairs, return_dep_tree=False, arr_dep=None, max_degree=None, USE_CUDA=False):
-    input_seqs = []
-    target_seqs = []
-    id_pairs = []
-    arr_aux = []
-    
-    id_arr = list(range(len(pairs)))
-    for i in range(batch_size):
-        id_random = random.choice(id_arr)
-        pair = pairs[id_random]
-        
-        if return_dep_tree:
-            arr_aux.append(arr_dep[id_random])
-        
-        id_pairs.append(id_random)
-        input_seqs.append(indexes_from_sentence(input_lang, pair[0]))
-        target_seqs.append(indexes_from_sentence(output_lang, pair[1]))
-
-    seq_pairs = sorted(zip(input_seqs, target_seqs), key=lambda p: len(p[0]), reverse=True)
-    input_seqs, target_seqs = zip(*seq_pairs)
-    
-    input_lengths = [len(s) for s in input_seqs]
-    input_padded = [pad_seq(input_lang, s, max(input_lengths)) for s in input_seqs]
-    target_lengths = [len(s) for s in target_seqs]
-    target_padded = [pad_seq(output_lang, s, max(target_lengths)) for s in target_seqs]
-
-    input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
-    target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
-    
-    if USE_CUDA:
-        input_var = input_var.cuda()
-        target_var = target_var.cuda()
-        
-    adj_arc_in = None
-    adj_arc_out = None
-    adj_lab_in = None
-    adj_lab_out = None
-
-    mask_in = None
-    mask_out = None
-    mask_loop = None
-    
-    if return_dep_tree:
-        # max len is setting mannually
-        adj_arc_in, adj_arc_out, adj_lab_in, adj_lab_out, mask_in, mask_out, mask_loop = get_adj(arr_aux, batch_size, max(input_lengths), max_degree)
-    
-        if USE_CUDA:
-            adj_arc_in = adj_arc_in.cuda()
-            adj_arc_out = adj_arc_out.cuda()
-            adj_lab_in = adj_lab_in.cuda()
-            adj_lab_out = adj_lab_out.cuda()
-
-            mask_in = mask_in.cuda()
-            mask_out = mask_out.cuda()
-            mask_loop = mask_loop.cuda()
-        
-    return input_var, target_var
-
 def indexes_from_sentence(lang, sentence):
     return [lang.vocab.stoi[word] for word in sentence.split(' ')] + [lang.vocab.stoi['<eos>']]
 
@@ -219,14 +161,6 @@ def variable_from_sentence(lang, sentence, USE_CUDA=False):
     var = Variable(torch.LongTensor(indexes).view(-1, 1))
     if USE_CUDA: var = var.cuda()
     return var
-
-def data_to_index(pairs, input_vec, output_vec):
-    new_pairs = []
-    
-    for pair in pairs:
-        new_pairs.append([indexes_from_sentence(input_vec, pair[0]), indexes_from_sentence(output_vec, pair[1])])
-        
-    return np.array(new_pairs)
 
 def get_trees(filename):
     trees = [get_tree(array) for array in (np.load(filename))]
@@ -318,11 +252,8 @@ def filter_pairs_lang(pairs, min_length, max_length):
 
     for ix, pair in enumerate(pairs):
         # Removing '' and "" in pairs, this is for easy processing 
-        pair[0] = pair[0].replace("'", '"')
         if len(pair[0].split()) >= min_length and len(pair[0].split()) <= max_length \
-            and len(pair[1].split()) >= min_length and len(pair[1].split()) <= max_length \
-            and len(re.findall(r'[?|.|!|"]', pair[0])) < 2 \
-            and len(nlp.dependency_parse(pair[0])) == len(pair[0].split()):
+            and len(pair[1].split()) >= min_length and len(pair[1].split()) <= max_length:
                 filtered_pairs.append(pair)
                 filtered_indexes.append(ix)
     return filtered_pairs, filtered_indexes
@@ -331,10 +262,10 @@ def read_langs(lang1, lang2, reverse=False, dir='corpus'):
     print("Reading lines...")
 
     # Read the file and split into lines
-    filename = f'{dir}/a.txt'
+    filename = f'{dir}/in.txt'
     lines_a = open(filename, encoding='utf8').read().strip().split('\n')
     
-    filename = f'{dir}/b.txt'
+    filename = f'{dir}/out.txt'
     lines_b = open(filename, encoding='utf8').read().strip().split('\n')
 
     # Split every line into pairs and normalize
@@ -363,12 +294,10 @@ def prepare_data(lang1_name, lang2_name, reverse=False, min_length=0, max_length
     if return_trees:
         if output_tree == 'tree':
             print('Creating trees...')
-            input_syntax = get_trees(os.path.join(dir, 'a.parents.npy'))[indexes]
-            output_syntax = get_trees(os.path.join(dir, 'b.parents.npy'))[indexes]
+            input_syntax = get_trees(os.path.join(dir, 'in.parents.npy'))[indexes]
         elif output_tree == 'matrix':
             print('Creating matrixes...')
-            input_syntax = get_matrixes(os.path.join(dir, 'a.parents.npy'))[indexes]
-            output_syntax = get_matrixes(os.path.join(dir, 'b.parents.npy'))[indexes]
+            input_syntax = get_matrixes(os.path.join(dir, 'in.parents.npy'))[indexes]
 
     print('Indexed %d words in input language, %d words in output' % (len(vector_1.vocab.itos), len(vector_2.vocab.itos)))
     if return_trees:
