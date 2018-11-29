@@ -258,13 +258,12 @@ def filter_pairs_lang(pairs, min_length, max_length):
                 filtered_indexes.append(ix)
     return filtered_pairs, filtered_indexes
 
-def read_langs(lang1, lang2, reverse=False, dir='corpus'):
+def read_train(reverse=False, dir='corpus'):
     print("Reading lines...")
 
     # Read the file and split into lines
     filename = f'{dir}/in.txt'
     lines_a = open(filename, encoding='utf8').read().strip().split('\n')
-    
     filename = f'{dir}/out.txt'
     lines_b = open(filename, encoding='utf8').read().strip().split('\n')
 
@@ -277,30 +276,50 @@ def read_langs(lang1, lang2, reverse=False, dir='corpus'):
         
     return pairs
 
-def prepare_data(lang1_name, lang2_name, reverse=False, min_length=0, max_length=50, dir='corpus', return_trees=False, output_tree='matrix'):
-    pairs = read_langs(lang1_name, lang2_name, reverse=reverse, dir=dir)
-    print("Read %d sentence pairs" % len(pairs))
+def read_test(dir):
+    pairs = []
+    with open(os.path.join(dir, 'test.raw'), 'r') as file:
+        for line in file.readlines():
+            pairs.append(line.replace('\n', '').split('\t'))
     
-    pairs, indexes = filter_pairs_lang(pairs, min_length, max_length)
-    print("Filtered to %d pairs" % len(pairs))
+    return pairs
+
+def prepare_data(reverse=False, min_length=0, max_length=50, dir_train='', dir_test='', return_trees=False, output_tree='matrix'):
+    pairs_train = read_train(reverse=reverse, dir=dir_train)
+    print("Read %d train pairs" % len(pairs_train))
+    
+    pairs_test = read_test(dir_test)
+    print("Read %d test pairs" % len(pairs_test))
+    
+    pairs_train, indexes = filter_pairs_lang(pairs_train, min_length, max_length)
+    print("Filtered to %d pairs" % len(pairs_train))
     
     print("Creating vocab...")
-    pairs = np.array(pairs)
+    pairs_train = np.array(pairs_train)
+    pairs_test = np.array(pairs_test)
+    
+    #return pairs_train, pairs_test.map(lambda x: x[0])
+    pairs_in = np.concatenate((pairs_train[:, 0], np.array(list(map(lambda x:x[0], pairs_test)))), axis=0)
+    pairs_out = pairs_train[:, 1]
+    
     indexes = np.array(indexes)
     
-    vector_1 = construct_vector(pairs[:, 0], lang1_name, dir=dir)
-    vector_2 = construct_vector(pairs[:, 1], lang2_name, dir=dir)
+    vector_1 = construct_vector(pairs_in, 'in', dir=dir_train)
+    vector_2 = construct_vector(pairs_out, 'out', dir=dir_train)
     
     if return_trees:
         if output_tree == 'tree':
             print('Creating trees...')
-            input_syntax = get_trees(os.path.join(dir, 'in.parents.npy'))[indexes]
+            train_syntax = get_trees(os.path.join(dir_train, 'in.parents.npy'))[indexes]
+            test_syntax = get_trees(os.path.join(dir_test, 'in.parents.npy'))
         elif output_tree == 'matrix':
             print('Creating matrixes...')
-            input_syntax = get_matrixes(os.path.join(dir, 'in.parents.npy'))[indexes]
+            train_syntax = get_matrixes(os.path.join(dir_train, 'in.parents.npy'))[indexes]
+            test_syntax = get_matrixes(os.path.join(dir_test, 'in.parents.npy'))
 
     print('Indexed %d words in input language, %d words in output' % (len(vector_1.vocab.itos), len(vector_2.vocab.itos)))
     if return_trees:
-        return vector_1, vector_2, input_syntax, output_syntax, pairs
+        return vector_1, vector_2, train_syntax, test_syntax, pairs_train, pairs_test
     else:
-        return vector_1, vector_2, pairs
+        return vector_1, vector_2, pairs_train, pairs_test
+    

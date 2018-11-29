@@ -8,66 +8,68 @@ from torch.nn import Parameter
 
 ######################### ATTENTION ###########################
 
-class Global_attn(nn.Module):
-    def __init__(self, method, hidden_size, USE_CUDA=False):
-        super(Global_attn, self).__init__()
+class Attention(nn.Module):
+    r"""
+    Applies an attention mechanism on the output features from the decoder.
+    .. math::
+            \begin{array}{ll}
+            x = context*output \\
+            attn = exp(x_i) / sum_j exp(x_j) \\
+            output = \tanh(w * (attn * context) + b * output)
+            \end{array}
+    Args:
+        dim(int): The number of expected features in the output
+    Inputs: output, context
+        - **output** (batch, output_len, dimensions): tensor containing the output features from the decoder.
+        - **context** (batch, input_len, dimensions): tensor containing features of the encoded input sequence.
+    Outputs: output, attn
+        - **output** (batch, output_len, dimensions): tensor containing the attended output features from the decoder.
+        - **attn** (batch, output_len, input_len): tensor containing attention weights.
+    Attributes:
+        linear_out (torch.nn.Linear): applies a linear transformation to the incoming data: :math:`y = Ax + b`.
+        mask (torch.Tensor, optional): applies a :math:`-inf` to the indices specified in the `Tensor`.
+    Examples::
+         >>> attention = seq2seq.models.Attention(256)
+         >>> context = Variable(torch.randn(5, 3, 256))
+         >>> output = Variable(torch.randn(5, 5, 256))
+         >>> output, attn = attention(output, context)
+    """
+    def __init__(self, dim, USE_CUDA):
+        super(Attention, self).__init__()
+        self.linear_out = nn.Linear(dim*2, dim)
+        self.mask = None
+
+    def set_mask(self, mask):
+        """
+        Sets indices to be masked
+        Args:
+            mask (torch.Tensor): tensor containing indices to be masked
+        """
+        self.mask = mask
+
+    def forward(self, output, context):
+        output = output.transpose(1, 0)
+        context = context.transpose(1, 0)
         
-        self.method = method
-        self.hidden_size = hidden_size
-        self.USE_CUDA = USE_CUDA
-        
-        if self.method == 'general':
-            self.attn = nn.Linear(self.hidden_size, hidden_size)
-            
-        elif self.method == 'concat':
-            self.attn = nn.Linear(self.hidden_size * 2, hidden_size)
-            self.other = nn.Parameter(torch.FloatTensor(1, hidden_size))
-            
-    def forward(self, hidden, encoder_outputs):
-        '''
-        hidden: (BS, hidden_size)
-        encoder_outputs(seq_len, BS, encoder_hidden_size)
-        '''
-        # encoder_outputs: (seq_len, batch_size, encoder_hidden_size)
-        seq_len = len(encoder_outputs)
-        batch_size = encoder_outputs.shape[1]
-        
-        # Calculate attention energies for each encoder output
-        # attn_energies: (seq_len, batch_size)
-        # hidden: (batch_size, hidden_size)
-        attn_energies = Variable(torch.zeros(seq_len, batch_size))
-        if self.USE_CUDA: attn_energies = attn_energies.cuda()
-        for i in range(seq_len):
-            attn_energies[i] = self.score(hidden, encoder_outputs[i])
-        
-        # Normalize energies [0-1] and resize to (batch_size, x=1, seq_len)
-        return F.softmax(attn_energies, 0).transpose(0, 1).unsqueeze(1)
-    
-    def score(self, hidden, encoder_output):
-        # hidden: (batch_size, hidden_size)
-        # encoder_output: (batch_size, encoder_hidden_size)
-        
-        # hidden sizes must match, batch_size = 1 only
-        if self.method == 'dot': 
-            # batch element-wise dot product
-            energy = torch.bmm(hidden.unsqueeze(1), 
-                        encoder_output.unsqueeze(2)).squeeze().squeeze()
-            # energy = hidden.dot(encoder_output)
-            return energy
-        
-        elif self.method == 'general':
-            energy = self.attn(encoder_output)
-            # batch element-wise dot product
-            energy = torch.bmm(hidden.unsqueeze(1), 
-                        encoder_output.unsqueeze(2)).squeeze().squeeze()
-            # energy = hidden.dot(energy)
-            return energy
-        
-        # TODO: test / modify method to support batch size > 1
-        elif self.method == 'concat': 
-            energy = self.attn(torch.cat((hidden, encoder_output), 1))
-            energy = self.other.dot(energy)
-            return energy  
+        batch_size = output.size(0)
+        hidden_size = output.size(2)
+        input_size = context.size(1)
+        # (batch, out_len, dim) * (batch, in_len, dim) -> (batch, out_len, in_len)
+        attn = torch.bmm(output, context.transpose(1, 2))
+        if self.mask is not None:
+            attn.data.masked_fill_(self.mask, -float('inf'))
+        attn = F.softmax(attn.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+
+        # (batch, out_len, in_len) * (batch, in_len, dim) -> (batch, out_len, dim)
+        mix = torch.bmm(attn, context)
+
+        # concat -> (batch, out_len, 2*dim)
+        combined = torch.cat((mix, output), dim=2)
+        # output -> (batch, out_len, dim)
+        output = F.tanh(self.linear_out(combined.view(-1, 2 * hidden_size))).view(batch_size, -1, hidden_size)
+
+        output = output.transpose(1, 0)
+        return output, attn
             
 ######################### DECODER  LUONG ###########################
 
@@ -84,12 +86,10 @@ class Decoder_luong(nn.Module):
         self.USE_CUDA = USE_CUDA
         self.lang = lang
         
-        # (size of dictionary of embeddings, size of embedding vector)
         self.embedding = nn.Embedding(output_size, emb_size)
-        # (input features: hidden_size + emb_size, hidden state features, number of layers)
-        self.rnn = nn.GRU(emb_size + hidden_size, hidden_size, n_layers, dropout=dropout)
-        self.attn = Global_attn(attn_method, hidden_size, USE_CUDA)
-        self.out = nn.Linear(hidden_size * 2, output_size)        
+        self.rnn = nn.GRU(emb_size, hidden_size, n_layers, dropout=dropout)
+        self.attn = Attention(hidden_size, USE_CUDA)
+        self.out = nn.Linear(hidden_size, output_size)
         
         self.init_weights()
         
@@ -103,45 +103,14 @@ class Decoder_luong(nn.Module):
         < output: (BS, output_size)
         < attn_weights: (BS, 1, seq_len)
         '''
-        # This is run one step at a time
+        #word_input = word_input.t()
+        #encoder_outputs = encoder_outputs.transpose(1, 0)
+        embedded = self.embedding(word_input)
+        rnn_output, hidden = self.rnn(embedded, last_hidden)
+        output, attn = self.attn(rnn_output, encoder_outputs)
+        output = F.log_softmax(self.out(output.contiguous().view(-1, self.hidden_size)), dim=1).view(word_input.shape[1], self.output_size)
         
-        # Get the embedding of the current input word (last output word)
-        # word_input: (seq_len=1, batch_size), values in [0..output_size)
-        word_embedded = self.embedding(word_input) #.view(1, 1, -1)
-        # word_embedded: (seq_len=1, batch_size, embedding_size)
-
-        # Combine embedded input word and last context, run through RNN
-        # last_context: (batch_size, encoder_hidden_size)
-        rnn_input = torch.cat((word_embedded, last_context.unsqueeze(0)), 2)
-        # rnn_input: (seq_len=1, batch_size, embedding_size + encoder_hidden_size)
-        # last_hidden: (num_layers, batch_size, hidden_size)
-        rnn_output, hidden = self.rnn(rnn_input, last_hidden)
-        # rnn_output: (seq_len=1, batch_size, hidden_size)
-        # hidden: same
-        
-        # Calculate attention and apply to encoder outputs
-        # encoder_outputs: (seq_len, batch_size, encoder_hidden_size)
-        attn_weights = self.attn(rnn_output.squeeze(0), encoder_outputs)
-        
-        # Check softmax:
-        # print('attn_weights sum: ', torch.sum(attn_weights.squeeze(), 1))
-        
-        # attn_weights: (batch_size, x=1, seq_len)
-        context = attn_weights.bmm(encoder_outputs.transpose(0, 1))
-        # context: (batch_size, x=1, encoder_hidden_size)
-        
-        # Final output layer using hidden state and context vector
-        rnn_output = rnn_output.squeeze(0)
-        # rnn_output: (batch_size, hidden_size)
-        context = context.squeeze(1)
-        # context: (batch_size, encoder_hidden_size)
-        output = F.log_softmax(self.out(torch.cat((rnn_output, context), 1)), 1)
-        # output: (batch_size, output_size)
-        # Check softmax (not log_softmax):
-        # print('output sum: ', torch.sum(output.squeeze(), 1))
-        
-        # Also return attention weights for visualization
-        return output, context, hidden, attn_weights
+        return output, last_context, hidden, attn
     
     def init_weights(self):
         if self.lang:
@@ -153,6 +122,7 @@ class Decoder_luong(nn.Module):
                 nn.init.constant_(param, 0.0)
             elif 'weight' in name:
                 nn.init.xavier_normal_(param)
+                
         self.out.bias.data.fill_(0)
         self.out.weight.data.uniform_(-0.1, 0.1)
         

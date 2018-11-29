@@ -133,6 +133,7 @@ class Evaluator():
                 hint += 1
                             
             if verbose:
+                print(output_words)
                 print("----- ID")
                 print(ix)
                 print("----- tokens input")
