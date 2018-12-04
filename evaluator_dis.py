@@ -123,8 +123,8 @@ class Evaluator():
     def evaluate_acc(self, pairs, k_beams=3, verbose=False):
         hint = 0
         for ix, pair in enumerate(pairs):
-            temp = pair.split('\t')
-            sentence, pos, id_senses = temp[0], int(temp[1]), temp[2:]
+            #temp = pair.split('\t')
+            sentence, pos, id_senses = pair[0].lower(), int(pair[1]), pair[2:]
             
             output_words = self.evaluate(sentence, k_beams)
             torch.cuda.empty_cache()
